@@ -1,0 +1,13 @@
+FROM python:2.7.13
+
+ARG RKE_VERSION
+ENV WORKSPACE /src/rancher-validation
+WORKDIR $WORKSPACE
+
+COPY [".", "$WORKSPACE"]
+
+RUN wget https://github.com/rancher/rke/releases/download/$RKE_VERSION/rke_linux-amd64 && \
+    mv rke_linux-amd64 /bin/rke && \
+    chmod +x /bin/rke  && \
+    cd $WORKSPACE && \
+    pip install -r requirements.txt

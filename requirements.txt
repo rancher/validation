@@ -1,0 +1,6 @@
+pytest==2.7.1
+pytest-xdist==1.16.0
+boto3==1.5.6
+invoke==0.22.0
+kubernetes==4.0.0
+python-digitalocean==1.13.2
