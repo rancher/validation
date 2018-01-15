@@ -10,6 +10,7 @@ node {
     }
 
     stage('Run Validation Tests') {
+      sh "ls -la"
       sh "docker run --rm -v jenkins_home:/var/jenkins_home --env .env " +
          "rancher-validation-tests /bin/bash -c \'pytest -s rke_tests/\'"
     }
