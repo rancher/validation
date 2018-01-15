@@ -4,7 +4,7 @@ set -x
 set -eu
 
 DEBUG="${DEBUG:-}"
-RKE_VERSION=v0.0.8-dev
+RKE_VERSION="${RKE_VERSION:v0.0.8-dev}"
 
 if [ "false" != "${DEBUG}" ]; then
     echo "Environment:"
