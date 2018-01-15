@@ -30,6 +30,7 @@ PRIVATE_IMAGES = {
 class AmazonWebServices(CloudProviderBase):
 
     def __init__(self):
+        print AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
         self._client = boto3.client(
             'ec2',
             aws_access_key_id=AWS_ACCESS_KEY_ID,
