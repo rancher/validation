@@ -46,3 +46,9 @@ class RKEClient(object):
         file_path = "{}/{}".format(self._working_dir, yml_name)
         with open(file_path, 'w') as f:
             f.write(yml_contents)
+
+    def get_kube_config_for_config(self, yml_name='cluster.yml'):
+        file_path = "{}/.kube_config_{}".format(self._working_dir, yml_name)
+        with open(file_path, 'r') as f:
+            kube_config = f.read()
+        return kube_config

@@ -12,6 +12,7 @@ AWS_REGION_AZ = 'us-east-2a'
 AWS_SECURITY_GROUPS = ['sg-3076bd59']
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.micro')
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
         'image': 'ami-cf6c47aa', 'ssh_user': 'ubuntu'},
@@ -30,7 +31,6 @@ PRIVATE_IMAGES = {
 class AmazonWebServices(CloudProviderBase):
 
     def __init__(self):
-        print AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
         self._client = boto3.client(
             'ec2',
             aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -46,13 +46,10 @@ class AmazonWebServices(CloudProviderBase):
         image, ssh_user = self._select_ami()
         instance = self._client.run_instances(
             ImageId=image,
-            InstanceType='t2.micro',
-            MinCount=1,
-            MaxCount=1,
-            TagSpecifications=[{
-                'ResourceType': 'instance',
-                'Tags': [{'Key': 'Name', 'Value': node_name}]}
-            ],
+            InstanceType=AWS_INSTANCE_TYPE,
+            MinCount=1, MaxCount=1,
+            TagSpecifications=[{'ResourceType': 'instance', 'Tags': [{
+                'Key': 'Name', 'Value': node_name}]}],
             KeyName=key_name,
             NetworkInterfaces=[{
                 'DeviceIndex': 0,
@@ -70,12 +67,24 @@ class AmazonWebServices(CloudProviderBase):
             public_ssh_key=self.get_public_ssh_key(key_name))
 
         if wait_for_ready:
-            self.wait_for_node_state(node)
+            node = self.wait_for_node_state(node)
 
         return node
 
+    def create_multiple_nodes(self, number_of_nodes, node_name_prefix,
+                              key_name, wait_for_ready=False):
+        nodes = []
+        for i in range(number_of_nodes):
+            node_name = node_name_prefix + '_' + i
+            nodes.append(self.create_node(node_name, key_name))
+
+        if wait_for_ready:
+            nodes = self.wait_for_nodes_state()
+        return nodes
+
     def get_node(self, provider_id):
-        node_filter = [{'Name': 'instance-id', 'Values': [provider_id]}]
+        node_filter = [{
+            'Name': 'instance-id', 'Values': [provider_id]}]
         try:
             nodes = self._client.describe_instances(Filters=node_filter)
             # TODO: need to parse response to Node object
@@ -95,45 +104,66 @@ class AmazonWebServices(CloudProviderBase):
                 node.node_id, str(e))
             raise RuntimeError(msg)
 
+    def update_node(self, node):
+        node_filter = [{
+            'Name': 'instance-id', 'Values': [node.provider_node_id]}]
+        try:
+            nodes = self._client.describe_instances(Filters=node_filter)
+
+            if len(nodes) == 0:
+                return node
+
+            aws_node = nodes[0]['Instances'][0]
+            node.state = aws_node['State']['Name']
+            node.host_name = aws_node.get('PublicDnsName')
+            node.public_ip_address = aws_node.get('PublicIpAddress')
+            node.private_ip_address = aws_node.get('PrivateIpAddress')
+            return node
+        except Boto3Error as e:
+            msg = "Failed while querying instance '{}' state!: {}".format(
+                node.node_id, str(e))
+            raise RuntimeError(msg)
+
     def stop_node(self, node, wait_for_stopped=False):
-        response = self._client.stop_instances(
+        self._client.stop_instances(
             InstanceIds=[node.provider_node_id])
         if wait_for_stopped:
-            self.wait_for_node_state(node, 'stopped')
-        return response
+            node = self.wait_for_node_state(node, 'stopped')
+        return node
 
     def delete_node(self, node, wait_for_deleted=False):
-        response = self._client.terminate_instances(
+        self._client.terminate_instances(
             InstanceIds=[node.provider_node_id])
         if wait_for_deleted:
-            self.wait_for_node_state(node, 'terminated')
-        return response
+            node = self.wait_for_node_state(node, 'terminated')
+        return node
 
     def wait_for_node_state(self, node, state='running'):
         # 'running', 'stopped', 'terminated'
-        node_filter = [{
-            'Name': 'instance-id',
-            'Values': [node.provider_node_id]}]
         timeout = 300
         start_time = time.time()
         while time.time() - start_time < timeout:
-            try:
-                nodes = self._client.describe_instances(Filters=node_filter)
-                nodes = nodes['Reservations']
-                if len(nodes) > 0:
-                    aws_node = nodes[0]['Instances'][0]
-                    actual_state = aws_node['State']['Name']
-                    if actual_state == state:
-                        node.state = actual_state
-                        node.host_name = aws_node.get('PublicDnsName')
-                        node.public_ip_address = aws_node.get(
-                            'PublicIpAddress')
-                        return
-                time.sleep(5)
-            except Boto3Error as e:
-                msg = "Failed while querying instance '{}' state!: {}".format(
-                    node.node_id, str(e))
-                raise RuntimeError(msg)
+            node = self.update_node(node)
+            if node.state == state:
+                return node
+            time.sleep(5)
+
+    def wait_for_nodes_state(self, nodes, state='running'):
+        # 'running', 'stopped', 'terminated'
+        timeout = 300
+        start_time = time.time()
+        completed_nodes = []
+        while time.time() - start_time < timeout:
+            for node in nodes:
+                if len(completed_nodes) == len(nodes):
+                    return completed_nodes
+                if node in completed_nodes:
+                    continue
+                node = self.update_node(node)
+                if node.state == state:
+                    completed_nodes.append(node)
+                time.sleep(1)
+            time.sleep(4)
 
     def import_ssh_key(self, ssh_key_name, public_ssh_key):
         self._client.delete_key_pair(KeyName=ssh_key_name)
