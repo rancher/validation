@@ -11,8 +11,7 @@ node {
 
     stage('Run Validation Tests') {
       sh "docker run --rm -v jenkins_home:/var/jenkins_home --env .env " +
-         "-e WORKSPACE_DIR=\"\$(pwd)\" rancher-validation-tests " +
-         "/bin/bash -c \'pytest -s rke_tests/\'"
+         "rancher-validation-tests /bin/bash -c \'pytest -s rke_tests/\'"
     }
 
   }
