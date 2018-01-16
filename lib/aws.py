@@ -41,8 +41,7 @@ class AmazonWebServices(CloudProviderBase):
             region_name=AWS_REGION)
 
         if AWS_SSH_KEY_NAME:
-            print os.path.abspath('.ssh')
-            self._master_ssh_key = self.get_ssh_key(AWS_SSH_PEM_KEY)
+            self._master_ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
             print self._master_ssh_key
 
         # Used for cleanup
