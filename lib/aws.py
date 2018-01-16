@@ -37,6 +37,10 @@ class AmazonWebServices(CloudProviderBase):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_REGION)
 
+        # Used for cleanup
+        self.created_node = []
+        self.created_keys = []
+
     def _select_ami(self):
         image = PRIVATE_IMAGES[
             "{}-docker-{}".format(self.OS_VERSION, self.DOCKER_VERSION)]
@@ -65,6 +69,9 @@ class AmazonWebServices(CloudProviderBase):
             ssh_key_name=key_name,
             ssh_key_path=self.get_ssh_key_path(key_name),
             public_ssh_key=self.get_public_ssh_key(key_name))
+
+        # mark for clean up at the end
+        self.create_node.append(node.provider_node_id)
 
         if wait_for_ready:
             node = self.wait_for_node_state(node)
@@ -171,6 +178,8 @@ class AmazonWebServices(CloudProviderBase):
         self._client.import_key_pair(
             KeyName=ssh_key_name,
             PublicKeyMaterial=public_ssh_key)
+        # mark keys for cleanup
+        self.created_keys.append(ssh_key_name)
 
     def delete_ssh_key(self, ssh_key_name):
         self._client.delete_key_pair(KeyName=ssh_key_name)
