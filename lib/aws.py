@@ -41,7 +41,8 @@ class AmazonWebServices(CloudProviderBase):
             region_name=AWS_REGION)
 
         if AWS_SSH_KEY_NAME:
-            print self.get_public_ssh_key(AWS_SSH_PEM_KEY)
+            self._master_ssh_key = self.get_ssh_key(AWS_SSH_PEM_KEY)
+            print self._master_ssh_key
 
         # Used for cleanup
         self.created_node = []
@@ -56,9 +57,9 @@ class AmazonWebServices(CloudProviderBase):
         image, ssh_user = self._select_ami()
         if key_name:
             ssh_key_path = self.get_ssh_key_path(key_name),
-            ssh_key = self.get_public_ssh_key(key_name)
+            ssh_key = self.get_ssh_key(key_name)
         else:
-            ssh_key = AWS_SSH_PEM_KEY
+            ssh_key = self._master_ssh_key
             ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
 
         instance = self._client.run_instances(

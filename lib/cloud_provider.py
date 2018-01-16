@@ -54,9 +54,9 @@ class CloudProviderBase(object):
             raise Exception("Failed to generate ssh key: {0}".format(e))
         return public_ssh_key
 
-    def get_public_ssh_key(self, ssh_key_name):
+    def get_ssh_key(self, ssh_key_name):
         try:
-            with open('.ssh/{}.pub'.format(ssh_key_name), 'r') as f:
+            with open('.ssh/{}'.format(ssh_key_name), 'r') as f:
                 ssh_key = f.read()
         except Exception:
             ssh_key = None
