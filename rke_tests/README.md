@@ -2,7 +2,7 @@
 
 ### Setup:
 - rke and kubectl need to be in your path
-- pip install requirements.txt
+- pip install requirements.txt (recommend using virtualenv before this step)
 - export following variables:
 
 ```
