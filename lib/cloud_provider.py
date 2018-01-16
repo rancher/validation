@@ -35,6 +35,7 @@ class CloudProviderBase(object):
 
     def save_master_key(self, ssh_key_name, ssh_key):
         if not os.path.isfile('.ssh/{}'.format(ssh_key_name)):
+            run('mkdir -p .ssh')
             with open('.ssh/{}'.format(ssh_key_name), 'w') as f:
                 f.write(ssh_key)
             run("chmod 0600 .ssh/{0}".format(ssh_key_name))
