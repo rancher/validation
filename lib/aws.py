@@ -85,7 +85,7 @@ class AmazonWebServices(CloudProviderBase):
             ssh_key=ssh_key)
 
         # mark for clean up at the end
-        self.create_node.append(node.provider_node_id)
+        self.created_node.append(node.provider_node_id)
 
         if wait_for_ready:
             node = self.wait_for_node_state(node)
