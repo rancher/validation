@@ -12,6 +12,9 @@ AWS_REGION_AZ = 'us-east-2a'
 AWS_SECURITY_GROUPS = ['sg-3076bd59']
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
+AWS_SSH_PEM_KEY = os.environ.get("AWS_SSH_PEM_KEY")
+
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.micro')
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
@@ -37,6 +40,10 @@ class AmazonWebServices(CloudProviderBase):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_REGION)
 
+        if AWS_SSH_KEY_NAME and AWS_SSH_PEM_KEY:
+            print AWS_SSH_KEY_NAME, AWS_SSH_KEY_NAME
+            self.save_master_key(AWS_SSH_KEY_NAME, AWS_SSH_PEM_KEY)
+
         # Used for cleanup
         self.created_node = []
         self.created_keys = []
@@ -46,14 +53,22 @@ class AmazonWebServices(CloudProviderBase):
             "{}-docker-{}".format(self.OS_VERSION, self.DOCKER_VERSION)]
         return image['image'], image['ssh_user']
 
-    def create_node(self, node_name, key_name, wait_for_ready=False):
+    def create_node(self, node_name, key_name=None, wait_for_ready=False):
         image, ssh_user = self._select_ami()
+        if key_name:
+            ssh_key_path = self.get_ssh_key_path(key_name),
+            ssh_key = self.get_public_ssh_key(key_name)
+        else:
+            ssh_key = AWS_SSH_PEM_KEY
+            ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
+
         instance = self._client.run_instances(
             ImageId=image,
             InstanceType=AWS_INSTANCE_TYPE,
             MinCount=1, MaxCount=1,
-            TagSpecifications=[{'ResourceType': 'instance', 'Tags': [{
-                'Key': 'Name', 'Value': node_name}]}],
+            TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
+                {'Key': 'Name', 'Value': node_name},
+                {'Key': 'CICD', 'Value': 'rke'}]}],
             KeyName=key_name,
             NetworkInterfaces=[{
                 'DeviceIndex': 0,
@@ -67,8 +82,8 @@ class AmazonWebServices(CloudProviderBase):
             state=instance['Instances'][0]['State']['Name'],
             ssh_user=ssh_user,
             ssh_key_name=key_name,
-            ssh_key_path=self.get_ssh_key_path(key_name),
-            public_ssh_key=self.get_public_ssh_key(key_name))
+            ssh_key_path=ssh_key_path,
+            ssh_key=ssh_key)
 
         # mark for clean up at the end
         self.create_node.append(node.provider_node_id)
@@ -79,7 +94,7 @@ class AmazonWebServices(CloudProviderBase):
         return node
 
     def create_multiple_nodes(self, number_of_nodes, node_name_prefix,
-                              key_name, wait_for_ready=False):
+                              key_name=None, wait_for_ready=False):
         nodes = []
         for i in range(number_of_nodes):
             node_name = "{}_{}".format(node_name_prefix, i)

@@ -34,16 +34,17 @@ class Node(object):
     def __init__(
         self, provider_node_id=None, host_name=None, node_name=None,
         public_ip_address=None, private_ip_address=None, state=None,
-        labels=None, public_ssh_key=None, ssh_key_name=None,
-            ssh_key_path=None, ssh_user=None):
+        labels=None, host_name_override=None, ssh_key=None,
+            ssh_key_name=None, ssh_key_path=None, ssh_user=None):
 
         self.provider_node_id = provider_node_id
         self.node_name = node_name
         self.host_name = host_name
+        self.host_name_override = host_name_override
         self.public_ip_address = public_ip_address
         self.private_ip_address = private_ip_address
         self.ssh_user = ssh_user
-        self.public_ssh_key = public_ssh_key
+        self.ssh_key = ssh_key
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
         self.labels = labels or {}

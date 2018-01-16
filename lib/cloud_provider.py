@@ -33,6 +33,13 @@ class CloudProviderBase(object):
     def delete_ssh_key(self, ssh_key_name):
         raise NotImplementedError
 
+    def save_master_key(self, ssh_key_name, ssh_key):
+        if not os.path.isfile('.ssh/{}'.format(ssh_key_name)):
+            with open('.ssh/{}'.format(ssh_key_name), 'w') as f:
+                f.write(ssh_key)
+            run("chmod 0600 .ssh/{0}".format(ssh_key_name))
+            run("cat .ssh/{}".format(ssh_key_name))
+
     def generate_ssh_key(self, ssh_key_name):
         try:
             if not os.path.isfile('.ssh/{}'.format(ssh_key_name)):
@@ -47,7 +54,12 @@ class CloudProviderBase(object):
         return public_ssh_key
 
     def get_public_ssh_key(self, ssh_key_name):
-        return open('.ssh/{}.pub'.format(ssh_key_name), 'r').read()
+        try:
+            with open('.ssh/{}.pub'.format(ssh_key_name), 'r') as f:
+                ssh_key = f.read()
+        except Exception:
+            ssh_key = None
+        return ssh_key
 
     def get_ssh_key_path(self, ssh_key_name):
         return os.path.abspath('.ssh/{}'.format(ssh_key_name))
