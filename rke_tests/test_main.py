@@ -12,6 +12,7 @@ def test_main(cloud_provider, rke_client):
     config_yml = rke_client.build_rke_template(
         rke_template, [node], master_ssh_key_path=node.ssh_key_path)
 
+    print config_yml
     # run rke up
     result = rke_client.up(config_yml)
     assert result.ok, result.stderr

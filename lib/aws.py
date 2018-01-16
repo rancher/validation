@@ -57,7 +57,7 @@ class AmazonWebServices(CloudProviderBase):
             ssh_key = self.get_ssh_key(key_name)
             ssh_key_path = self.get_ssh_key_path(key_name),
         else:
-            key_name = AWS_SSH_KEY_NAME
+            key_name = AWS_SSH_KEY_NAME.replace('.pem', '')
             ssh_key = self._master_ssh_key
             ssh_key_path = self.get_ssh_key_path(key_name)
 
