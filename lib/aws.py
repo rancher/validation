@@ -41,7 +41,7 @@ class AmazonWebServices(CloudProviderBase):
             region_name=AWS_REGION)
 
         if AWS_SSH_KEY_NAME and AWS_SSH_PEM_KEY:
-            print AWS_SSH_KEY_NAME, AWS_SSH_KEY_NAME
+            print AWS_SSH_KEY_NAME, AWS_SSH_PEM_KEY
             self.save_master_key(AWS_SSH_KEY_NAME, AWS_SSH_PEM_KEY)
 
         # Used for cleanup
