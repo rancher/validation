@@ -167,6 +167,7 @@ class AmazonWebServices(CloudProviderBase):
         while time.time() - start_time < timeout:
             node = self.update_node(node)
             if node.state == state:
+                time.sleep(20)
                 return node
             time.sleep(5)
 
