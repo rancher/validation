@@ -6,8 +6,7 @@ node {
 
     stage('Configure and Build') {
       sh "./scripts/rke/configure.sh"
-      sh "mkdir -p .ssh && echo -e \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME}"
-      sh "ls -la"
+      sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME} && chmod 0600 .ssh/*"
       sh "./scripts/rke/build.sh"
     }
 

@@ -13,7 +13,6 @@ AWS_SECURITY_GROUPS = ['sg-3076bd59']
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
-AWS_SSH_PEM_KEY = os.environ.get("AWS_SSH_PEM_KEY")
 
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.micro')
 PRIVATE_IMAGES = {
@@ -42,7 +41,6 @@ class AmazonWebServices(CloudProviderBase):
 
         if AWS_SSH_KEY_NAME:
             self._master_ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
-            print self._master_ssh_key
 
         # Used for cleanup
         self.created_node = []
@@ -56,11 +54,12 @@ class AmazonWebServices(CloudProviderBase):
     def create_node(self, node_name, key_name=None, wait_for_ready=False):
         image, ssh_user = self._select_ami()
         if key_name:
-            ssh_key_path = self.get_ssh_key_path(key_name),
             ssh_key = self.get_ssh_key(key_name)
+            ssh_key_path = self.get_ssh_key_path(key_name),
         else:
+            key_name = AWS_SSH_KEY_NAME
             ssh_key = self._master_ssh_key
-            ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
+            ssh_key_path = self.get_ssh_key_path(key_name)
 
         instance = self._client.run_instances(
             ImageId=image,

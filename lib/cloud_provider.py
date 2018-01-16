@@ -55,8 +55,6 @@ class CloudProviderBase(object):
         return public_ssh_key
 
     def get_ssh_key(self, ssh_key_name):
-        run('ls -la .ssh/')
-        print '.ssh/{}'.format(ssh_key_name)
         with open('.ssh/{}'.format(ssh_key_name), 'r') as f:
             ssh_key = f.read()
         return ssh_key
