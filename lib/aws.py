@@ -40,9 +40,8 @@ class AmazonWebServices(CloudProviderBase):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_REGION)
 
-        if AWS_SSH_KEY_NAME and AWS_SSH_PEM_KEY:
-            print AWS_SSH_KEY_NAME, AWS_SSH_PEM_KEY
-            self.save_master_key(AWS_SSH_KEY_NAME, AWS_SSH_PEM_KEY)
+        if AWS_SSH_KEY_NAME:
+            print self.get_public_ssh_key(AWS_SSH_PEM_KEY)
 
         # Used for cleanup
         self.created_node = []

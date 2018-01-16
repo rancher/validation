@@ -6,9 +6,10 @@ node {
 
     stage('Configure and Build') {
       sh "./scripts/rke/configure.sh"
-      sh "./scripts/rke/build.sh"
       sh "mkdir .ssh && ${AWS_SSH_PEM_KEY} > .ssh/${AWS_SSH_KEY_NAME}"
       sh "cat .ssh/${AWS_SSH_KEY_NAME}"
+      sh "./scripts/rke/build.sh"
+
     }
 
     stage('Run Validation Tests') {
