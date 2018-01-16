@@ -56,7 +56,7 @@ class CloudProviderBase(object):
 
     def get_ssh_key(self, ssh_key_name):
         try:
-            run('ls .ssh')
+            run('ls -la .ssh/')
             with open('.ssh/{}'.format(ssh_key_name), 'r') as f:
                 ssh_key = f.read()
         except Exception:
