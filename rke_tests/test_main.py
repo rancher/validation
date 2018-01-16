@@ -2,13 +2,11 @@ from conftest import *  # NOQA
 
 
 def test_main(cloud_provider, rke_client):
-    ssh_key_name = 'mykeyfornode'
     node_name = 'pytest-1234-main-test-node0'
     rke_template = 'minimal_cluster_template.yml.j2'
 
     # create node from cloud provider
-    node = cloud_provider.create_node(
-        node_name, ssh_key_name, wait_for_ready=True)
+    node = cloud_provider.create_node(node_name, wait_for_ready=True)
 
     # create rke cluster yml
     config_yml = rke_client.build_rke_template(
