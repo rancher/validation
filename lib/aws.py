@@ -75,19 +75,19 @@ class AmazonWebServices(CloudProviderBase):
                               key_name, wait_for_ready=False):
         nodes = []
         for i in range(number_of_nodes):
-            node_name = node_name_prefix + '_' + i
+            node_name = "{}_{}".format(node_name_prefix, i)
             nodes.append(self.create_node(node_name, key_name))
 
         if wait_for_ready:
-            nodes = self.wait_for_nodes_state()
+            nodes = self.wait_for_nodes_state(nodes)
         return nodes
 
     def get_node(self, provider_id):
         node_filter = [{
             'Name': 'instance-id', 'Values': [provider_id]}]
         try:
-            nodes = self._client.describe_instances(Filters=node_filter)
-            # TODO: need to parse response to Node object
+            response = self._client.describe_instances(Filters=node_filter)
+            nodes = response.get('Reservations', [])
             if len(nodes) == 0:
                 return None  # no node found
 
@@ -96,7 +96,8 @@ class AmazonWebServices(CloudProviderBase):
                 provider_node_id=provider_id,
                 # node_name= aws_node tags?,
                 host_name=aws_node.get('PublicDnsName'),
-                ip_address=aws_node.get('PublicIpAddress'),
+                public_ip_address=aws_node.get('PublicIpAddress'),
+                private_ip_address=aws_node.get('PrivateIpAddress'),
                 state=aws_node['State']['Name'])
             return node
         except Boto3Error as e:
@@ -108,9 +109,9 @@ class AmazonWebServices(CloudProviderBase):
         node_filter = [{
             'Name': 'instance-id', 'Values': [node.provider_node_id]}]
         try:
-            nodes = self._client.describe_instances(Filters=node_filter)
-
-            if len(nodes) == 0:
+            response = self._client.describe_instances(Filters=node_filter)
+            nodes = response.get('Reservations', [])
+            if len(nodes) == 0 or len(nodes[0]['Instances']) == 0:
                 return node
 
             aws_node = nodes[0]['Instances'][0]
