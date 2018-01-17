@@ -9,7 +9,7 @@ nodes:
     role: [worker]
   - address: {{ ip_address_2 }}
     user: {{ ssh_user_2 }}
-    role: [etcd,worker]
+    role: [worker]
 services:
   etcd:
     image: quay.io/coreos/etcd:latest
