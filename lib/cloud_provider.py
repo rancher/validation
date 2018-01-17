@@ -49,7 +49,7 @@ class CloudProviderBase(object):
                     ssh_key_name))
                 run("chmod 0600 .ssh/{0}".format(ssh_key_name))
 
-            public_ssh_key = self.get_public_ssh_key(ssh_key_name)
+            public_ssh_key = self.get_ssh_key(ssh_key_name + '.pub')
         except Exception as e:
             raise Exception("Failed to generate ssh key: {0}".format(e))
         return public_ssh_key
