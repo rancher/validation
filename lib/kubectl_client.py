@@ -20,7 +20,7 @@ class KubectlClient(object):
 
     def __init__(self):
         self._kube_config_path = None
-        self._hide = False if DEBUG.tolower() == 'true' else True
+        self._hide = False if DEBUG.lower() == 'true' else True
 
     @property
     def kube_config_path(self):

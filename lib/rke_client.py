@@ -16,7 +16,7 @@ class RKEClient(object):
     """
     def __init__(self):
         self._working_dir = tempfile.mkdtemp()
-        self._hide = False if DEBUG.tolower() == 'true' else True
+        self._hide = False if DEBUG.lower() == 'true' else True
 
     def _run(self, command):
         return run(
