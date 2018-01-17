@@ -12,7 +12,6 @@ def test_minimal_cluster(test_name, cloud_provider, rke_client, kubectl):
     config_yml = rke_client.build_rke_template(
         rke_template, [node], master_ssh_key_path=node.ssh_key_path)
 
-    print config_yml
     # run rke up
     result = rke_client.up(config_yml)
     assert result.ok, result.stderr
@@ -40,7 +39,7 @@ def test_multiple_nodes_cluster(test_name, cloud_provider, rke_client, kubectl):
 
     # create rke cluster yml
     config_yml = rke_client.build_rke_template(
-        rke_template, nodes, master_ssh_key_path=node.ssh_key_path)
+        rke_template, nodes, master_ssh_key_path=nodes[0].ssh_key_path)
 
     # run rke up
     result = rke_client.up(config_yml)
@@ -56,4 +55,5 @@ def test_multiple_nodes_cluster(test_name, cloud_provider, rke_client, kubectl):
         input_config={'namespace': 'main', 'port_ext': '01'})
 
     # clean up node(s)
-    # cloud_provider.delete_node(node, wait_for_deleted=True)
+    # for node in nodes:
+    #   cloud_provider.delete_node(node, wait_for_deleted=True)
