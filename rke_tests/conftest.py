@@ -17,8 +17,8 @@ def cloud_provider():
 
 
 @pytest.fixture(scope='function')
-def rke_client():
-    return RKEClient()
+def rke_client(cloud_provider):
+    return RKEClient(master_ssh_key_path=cloud_provider.master_ssh_key_path)
 
 
 @pytest.fixture(scope='function')

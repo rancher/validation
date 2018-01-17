@@ -41,8 +41,12 @@ class AmazonWebServices(CloudProviderBase):
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
             region_name=AWS_REGION)
 
+        self.master_ssh_key = None
+        self.master_ssh_key_path = None
+
         if AWS_SSH_KEY_NAME:
-            self._master_ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
+            self.master_ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
+            self.master_ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
 
         # Used for cleanup
         self.created_node = []
@@ -66,8 +70,8 @@ class AmazonWebServices(CloudProviderBase):
             ssh_key_path = self.get_ssh_key_path(key_name),
         else:
             key_name = AWS_SSH_KEY_NAME.replace('.pem', '')
-            ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
-            ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
+            ssh_key = self.master_ssh_key
+            ssh_key_path = self.master_ssh_key_path
 
         instance = self._client.run_instances(
             ImageId=image,
@@ -191,6 +195,7 @@ class AmazonWebServices(CloudProviderBase):
         while time.time() - start_time < timeout:
             for node in nodes:
                 if len(completed_nodes) == len(nodes):
+                    time.sleep(20)  # Give the node some extra time
                     return completed_nodes
                 if node in completed_nodes:
                     continue

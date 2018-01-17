@@ -14,7 +14,7 @@ class RKEClient(object):
     """
     Wrapper to interact with the RKE cli
     """
-    def __init__(self):
+    def __init__(self, master_ssh_key_path):
         self._working_dir = tempfile.mkdtemp()
         self._hide = False if DEBUG.lower() == 'true' else True
 
@@ -35,7 +35,7 @@ class RKEClient(object):
         return result
 
     def build_rke_template(self, template, nodes, **kwargs):
-        render_dict = {}
+        render_dict = {'master_ssh_key_path': self.master_ssh_key_path}
         render_dict.update(kwargs)
         node_index = 0
         for node in nodes:
@@ -43,10 +43,8 @@ class RKEClient(object):
                 'ssh_user_{}'.format(node_index): node.ssh_user,
                 'ip_address_{}'.format(node_index): node.public_ip_address,
                 'dns_hostname_{}'.format(node_index): node.host_name,
-                # 'host_name_override_{}'.format(node_index):
-                #     node.host_name_override,
-                # 'internal_address_{}'.format(node_index):
-                #     node.private_ip_address
+                'ssh_key_path_{}'.format(node_index): node.ssh_key_path,
+                'ssh_key_{}'.format(node_index): node.ssh_key,
             }
             render_dict.update(node_dict)
             node_index += 1
