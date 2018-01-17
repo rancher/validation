@@ -7,6 +7,7 @@ import tempfile
 DEFAULT_CONFIG_NAME = 'cluster.yml'
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '../resources/rke_templates')
+DEBUG = os.environ.get('DEBUG', 'false')
 
 
 class RKEClient(object):
@@ -15,10 +16,12 @@ class RKEClient(object):
     """
     def __init__(self):
         self._working_dir = tempfile.mkdtemp()
+        self._hide = False if DEBUG.tolower() == 'true' else True
 
     def _run(self, command):
         return run(
-            'cd {0} && {1}'.format(self._working_dir, command), warn=True)
+            'cd {0} && {1}'.format(self._working_dir, command),
+            warn=True, hide=self._hide)
 
     def up(self, config_yml, config=None):
         yml_name = config if config else DEFAULT_CONFIG_NAME
@@ -38,7 +41,8 @@ class RKEClient(object):
         for node in nodes:
             node_dict = {
                 'ssh_user_{}'.format(node_index): node.ssh_user,
-                'host_name_ip_{}'.format(node_index): node.public_ip_address,
+                'ip_address_{}'.format(node_index): node.public_ip_address,
+                'dns_hostname_{}'.format(node_index): node.host_name,
                 # 'host_name_override_{}'.format(node_index):
                 #     node.host_name_override,
                 # 'internal_address_{}'.format(node_index):

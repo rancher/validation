@@ -13,11 +13,14 @@ k8s_base_lb_node_port = os.environ.get("BASE_LB_NODE_PORT", "320")
 K8_SUBDIR = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                          '../resources/k8s_templates')
 
+DEBUG = os.environ.get('DEBUG', 'false')
+
 
 class KubectlClient(object):
 
     def __init__(self):
         self._kube_config_path = None
+        self._hide = False if DEBUG.tolower() == 'true' else True
 
     @property
     def kube_config_path(self):
@@ -29,7 +32,7 @@ class KubectlClient(object):
 
     def execute_kubectl_cmd(self, cmd):
         return run('kubectl --kubeconfig {} {} -o json'.format(
-            self.kube_config_path, cmd), warn=True)
+            self.kube_config_path, cmd), warn=True, hide=self._hide)
 
     def create_ns(self, namespace):
         self.execute_kubectl_cmd("create namespace " + namespace)

@@ -13,6 +13,8 @@ AWS_SECURITY_GROUPS = ['sg-3076bd59']
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
+AWS_CICD_INSTANCE_TAG = os.environ.get(
+    "AWS_CICD_INSTANCE_TAG", 'rancher-validation')
 
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.micro')
 PRIVATE_IMAGES = {
@@ -46,20 +48,26 @@ class AmazonWebServices(CloudProviderBase):
         self.created_node = []
         self.created_keys = []
 
-    def _select_ami(self):
+    def _select_ami(self, os_version=None, docker_version=None):
+        os_version = os_version or self.OS_VERSION
+        docker_version = docker_version or self.DOCKER_VERSION
         image = PRIVATE_IMAGES[
-            "{}-docker-{}".format(self.OS_VERSION, self.DOCKER_VERSION)]
+            "{}-docker-{}".format(os_version, docker_version)]
         return image['image'], image['ssh_user']
 
-    def create_node(self, node_name, key_name=None, wait_for_ready=False):
-        image, ssh_user = self._select_ami()
+    def create_node(
+        self, node_name, key_name=None, os_version=None, docker_version=None,
+            wait_for_ready=False):
+
+        image, ssh_user = self._select_ami(os_version, docker_version)
+
         if key_name:
             ssh_key = self.get_ssh_key(key_name)
             ssh_key_path = self.get_ssh_key_path(key_name),
         else:
             key_name = AWS_SSH_KEY_NAME.replace('.pem', '')
-            ssh_key = self._master_ssh_key
-            ssh_key_path = self.get_ssh_key_path(key_name)
+            ssh_key = self.get_ssh_key(AWS_SSH_KEY_NAME)
+            ssh_key_path = self.get_ssh_key_path(AWS_SSH_KEY_NAME)
 
         instance = self._client.run_instances(
             ImageId=image,
@@ -67,7 +75,7 @@ class AmazonWebServices(CloudProviderBase):
             MinCount=1, MaxCount=1,
             TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
                 {'Key': 'Name', 'Value': node_name},
-                {'Key': 'CICD', 'Value': 'rke'}]}],
+                {'Key': 'CICD', 'Value': AWS_CICD_INSTANCE_TAG}]}],
             KeyName=key_name,
             NetworkInterfaces=[{
                 'DeviceIndex': 0,
@@ -92,12 +100,16 @@ class AmazonWebServices(CloudProviderBase):
 
         return node
 
-    def create_multiple_nodes(self, number_of_nodes, node_name_prefix,
-                              key_name=None, wait_for_ready=False):
+    def create_multiple_nodes(
+        self, number_of_nodes, node_name_prefix, os_version=None,
+            docker_version=None, key_name=None, wait_for_ready=False):
+
         nodes = []
         for i in range(number_of_nodes):
             node_name = "{}_{}".format(node_name_prefix, i)
-            nodes.append(self.create_node(node_name, key_name))
+            nodes.append(self.create_node(
+                node_name, key_name=key_name, os_version=os_version,
+                docker_version=docker_version))
 
         if wait_for_ready:
             nodes = self.wait_for_nodes_state(nodes)
@@ -167,7 +179,7 @@ class AmazonWebServices(CloudProviderBase):
         while time.time() - start_time < timeout:
             node = self.update_node(node)
             if node.state == state:
-                time.sleep(20)
+                time.sleep(5)  # Give the node some extra time
                 return node
             time.sleep(5)
 
