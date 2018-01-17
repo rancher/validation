@@ -179,7 +179,7 @@ class AmazonWebServices(CloudProviderBase):
         while time.time() - start_time < timeout:
             node = self.update_node(node)
             if node.state == state:
-                time.sleep(5)  # Give the node some extra time
+                time.sleep(20)  # Give the node some extra time
                 return node
             time.sleep(5)
 
