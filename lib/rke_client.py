@@ -60,3 +60,7 @@ class RKEClient(object):
         with open(file_path, 'r') as f:
             kube_config = f.read()
         return kube_config
+
+    def get_kube_config_path(self, yml_name=DEFAULT_CONFIG_NAME):
+        return os.path.abspath(
+            "{}/.kube_config_{}".format(self._working_dir, yml_name))

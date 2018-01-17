@@ -3,6 +3,7 @@ import pytest
 
 from lib.aws import AmazonWebServices
 from lib.rke_client import RKEClient
+from lib.kubectl_client import KubectlClient
 
 
 CLOUD_PROVIDER = os.environ.get("CLOUD_PROVIDER", 'AWS')
@@ -17,3 +18,8 @@ def cloud_provider():
 @pytest.fixture(scope='function')
 def rke_client():
     return RKEClient()
+
+
+@pytest.fixture(scope='function')
+def kubectl():
+    return KubectlClient()

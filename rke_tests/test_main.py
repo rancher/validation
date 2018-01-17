@@ -1,7 +1,7 @@
 from conftest import *  # NOQA
 
 
-def test_main(cloud_provider, rke_client):
+def test_main(cloud_provider, rke_client, kubectl):
     node_name = 'pytest-1234-main-test-node0'
     rke_template = 'minimal_cluster_template.yml.j2'
 
@@ -21,5 +21,10 @@ def test_main(cloud_provider, rke_client):
     kube_config = rke_client.get_kube_config_for_config()
     print kube_config
 
+    #
+    kubectl.kube_config_path = rke_client.kube_config_path()
+    result = kubectl.create_validation_stack(
+        input_config={'namespace': 'main', 'port_ext': '01'})
+
     # clean up node(s)
-    cloud_provider.delete_node(node, wait_for_deleted=True)
+    # cloud_provider.delete_node(node, wait_for_deleted=True)
