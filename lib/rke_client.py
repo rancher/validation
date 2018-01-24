@@ -6,6 +6,8 @@ from yaml import load
 
 
 DEFAULT_CONFIG_NAME = 'cluster.yml'
+DEFAULT_K8S_IMAGE = os.environ.get(
+    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.3-rancher2')
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '../resources/rke_templates')
 DEBUG = os.environ.get('DEBUG', 'false')
@@ -37,7 +39,9 @@ class RKEClient(object):
         return result
 
     def build_rke_template(self, template, nodes, **kwargs):
-        render_dict = {'master_ssh_key_path': self.master_ssh_key_path}
+        render_dict = {
+            'master_ssh_key_path': self.master_ssh_key_path,
+            'k8_rancher_image': DEFAULT_K8S_IMAGE}
         render_dict.update(kwargs)  # will up master_key if passed in
         node_index = 0
         for node in nodes:
