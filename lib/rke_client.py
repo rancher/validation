@@ -2,9 +2,12 @@ from invoke import run
 import os
 import jinja2
 import tempfile
+from yaml import load
 
 
 DEFAULT_CONFIG_NAME = 'cluster.yml'
+DEFAULT_K8S_IMAGE = os.environ.get(
+    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.3-rancher2')
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '../resources/rke_templates')
 DEBUG = os.environ.get('DEBUG', 'false')
@@ -31,12 +34,14 @@ class RKEClient(object):
         result = self._run("rke up {0}".format(cli_args))
         return result
 
-    def remove(self, config=None, force=False):
-        result = run("rke remove")
+    def remove(self, config=None):
+        result = run("rke remove --force")
         return result
 
     def build_rke_template(self, template, nodes, **kwargs):
-        render_dict = {'master_ssh_key_path': self.master_ssh_key_path}
+        render_dict = {
+            'master_ssh_key_path': self.master_ssh_key_path,
+            'k8_rancher_image': DEFAULT_K8S_IMAGE}
         render_dict.update(kwargs)  # will up master_key if passed in
         node_index = 0
         for node in nodes:
@@ -51,9 +56,21 @@ class RKEClient(object):
             }
             render_dict.update(node_dict)
             node_index += 1
-        return jinja2.Environment(
+        yml_contents = jinja2.Environment(
             loader=jinja2.FileSystemLoader(TEMPLATE_PATH)
         ).get_template(template).render(render_dict)
+        nodes = self.update_nodes(yml_contents, nodes)
+        return yml_contents, nodes
+
+    def update_nodes(self, yml_contents, nodes):
+        yml_dict = load(yml_contents)
+        for dict_node in yml_dict['nodes']:
+            for node in nodes:
+                if node.public_ip_address == dict_node['address'] or \
+                        node.host_name == dict_node['address']:
+                    node.roles = dict_node['role']
+                    break
+        return nodes
 
     def _save_cluster_yml(self, yml_name, yml_contents):
         file_path = "{}/{}".format(self._working_dir, yml_name)

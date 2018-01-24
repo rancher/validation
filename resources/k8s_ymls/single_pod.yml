@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-test-util
+  labels:
+    k8s-app: pod-test-util
+spec:
+  containers:
+  - name: pod-test-util
+    image: tjcordingly/container-utils
+    ports:
+    - containerPort: 5000
