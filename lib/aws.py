@@ -28,7 +28,7 @@ PRIVATE_IMAGES = {
         'image': 'ami-f9644e9c', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-latest": {
         'image': 'ami-f9644e9c', 'ssh_user': 'ubuntu'},
-    "rhel-7.4-docker-1.12.6": {
+    "rhel-7.4-docker-native": {
         'image': 'ami-1f6c477a', 'ssh_user': 'ec2-user'}}
 
 
@@ -61,7 +61,7 @@ class AmazonWebServices(CloudProviderBase):
 
     def create_node(
         self, node_name, key_name=None, os_version=None, docker_version=None,
-            wait_for_ready=False):
+            wait_for_ready=True):
 
         image, ssh_user = self._select_ami(os_version, docker_version)
 
@@ -88,7 +88,6 @@ class AmazonWebServices(CloudProviderBase):
             Placement={'AvailabilityZone': AWS_REGION_AZ})
 
         node = Node(
-            node_name=node_name,
             provider_node_id=instance['Instances'][0]['InstanceId'],
             state=instance['Instances'][0]['State']['Name'],
             ssh_user=ssh_user,
@@ -101,22 +100,24 @@ class AmazonWebServices(CloudProviderBase):
 
         if wait_for_ready:
             node = self.wait_for_node_state(node)
-
+            node.wait_for_ssh_ready()
         return node
 
     def create_multiple_nodes(
         self, number_of_nodes, node_name_prefix, os_version=None,
-            docker_version=None, key_name=None, wait_for_ready=False):
+            docker_version=None, key_name=None, wait_for_ready=True):
 
         nodes = []
         for i in range(number_of_nodes):
             node_name = "{}_{}".format(node_name_prefix, i)
             nodes.append(self.create_node(
                 node_name, key_name=key_name, os_version=os_version,
-                docker_version=docker_version))
+                docker_version=docker_version, wait_for_ready=False))
 
         if wait_for_ready:
             nodes = self.wait_for_nodes_state(nodes)
+            for node in nodes:
+                node.wait_for_ssh_ready()
         return nodes
 
     def get_node(self, provider_id):
@@ -183,7 +184,6 @@ class AmazonWebServices(CloudProviderBase):
         while time.time() - start_time < timeout:
             node = self.update_node(node)
             if node.state == state:
-                time.sleep(20)  # Give the node some extra time
                 return node
             time.sleep(5)
 

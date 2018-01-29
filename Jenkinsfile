@@ -11,8 +11,19 @@ node {
     }
 
     stage('Run Validation Tests') {
-      sh "docker run --rm -v jenkins_home:/var/jenkins_home --env-file .env " +
-         "rancher-validation-tests /bin/bash -c \'pytest -s rke_tests/\'"
+      try {
+        sh "docker run --name ${JOB_NAME}${env.BUILD_NUMBER}  --env-file .env " +
+           "rancher-validation-tests /bin/bash -c \'pytest -v -s --junit-xml=results.xml rke_tests/\'"
+      } catch(err) {
+        echo 'Test run had failures. Collecting results...'
+      }
+
+    }
+
+    stage('Test Report') {
+      sh "docker cp ${JOB_NAME}${env.BUILD_NUMBER}:/src/rancher-validation/results.xml ."
+      step([$class: 'JUnitResultArchiver', testResults: '**/results.xml'])
+      sh "docker rm -v ${JOB_NAME}${env.BUILD_NUMBER}"
     }
 
   }
