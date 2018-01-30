@@ -1,14 +1,16 @@
 from invoke import run
 import os
 import jinja2
+import logging
 import tempfile
 import time
 from yaml import load
 
 
+logging.getLogger('invoke').setLevel(logging.WARNING)
 DEFAULT_CONFIG_NAME = 'cluster.yml'
 DEFAULT_K8S_IMAGE = os.environ.get(
-    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.3-rancher2')
+    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.5-rancher4')
 DEFAULT_NETWORK_PLUGIN = os.environ.get('DEFAULT_NETWORK_PLUGIN', 'canal')
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '../resources/rke_templates')
@@ -40,7 +42,7 @@ class RKEClient(object):
         self._save_cluster_yml(yml_name, config_yml)
         cli_args = '' if config is None else ' --config {0}'.format(config)
         result = self._run("rke up {0}".format(cli_args))
-        print "RKE kube_config: {0}".format(self.get_kube_config_for_config())
+        print "RKE kube_config:\n{0}".format(self.get_kube_config_for_config())
         return result
 
     def remove(self, config=None):
@@ -71,8 +73,13 @@ class RKEClient(object):
         yml_contents = jinja2.Environment(
             loader=jinja2.FileSystemLoader(TEMPLATE_PATH)
         ).get_template(template).render(render_dict)
+        print "Generated cluster.yml contents:\n", yml_contents
         nodes = self.update_nodes(yml_contents, nodes)
         return yml_contents, nodes
+
+    @staticmethod
+    def convert_to_dict(yml_contents):
+        return load(yml_contents)
 
     def update_nodes(self, yml_contents, nodes):
         """
@@ -80,7 +87,7 @@ class RKEClient(object):
         the nodes created by the cloud provider, so that the nodes list
         is the source of truth to validated against kubectl calls
         """
-        yml_dict = load(yml_contents)
+        yml_dict = self.convert_to_dict(yml_contents)
         for dict_node in yml_dict['nodes']:
             for node in nodes:
                 if node.public_ip_address == dict_node['address'] or \
@@ -92,6 +99,12 @@ class RKEClient(object):
                     else:
                         node.node_name = node.host_name
                     node.roles = dict_node['role']
+
+                    # if internal_address is given, used to communicate
+                    # this is the expected ip/value in nginx.conf
+                    node.node_address = node.host_name
+                    if dict_node.get('internal_address'):
+                        node.node_address = dict_node['internal_address']
                     break
         return nodes
 
@@ -101,17 +114,17 @@ class RKEClient(object):
             f.write(yml_contents)
 
     def get_kube_config_for_config(self, yml_name=DEFAULT_CONFIG_NAME):
-        file_path = "{}/.kube_config_{}".format(self._working_dir, yml_name)
+        file_path = "{}/kube_config_{}".format(self._working_dir, yml_name)
         with open(file_path, 'r') as f:
             kube_config = f.read()
         return kube_config
 
     def kube_config_path(self, yml_name=DEFAULT_CONFIG_NAME):
         return os.path.abspath(
-            "{}/.kube_config_{}".format(self._working_dir, yml_name))
+            "{}/kube_config_{}".format(self._working_dir, yml_name))
 
     def save_kube_config_locally(self, yml_name=DEFAULT_CONFIG_NAME):
-        file_name = '.kube_config_{}'.format(yml_name)
+        file_name = 'kube_config_{}'.format(yml_name)
         contents = self.get_kube_config_for_config(yml_name)
         with open(file_name, 'w') as f:
             f.write(contents)

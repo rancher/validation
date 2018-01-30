@@ -2,6 +2,7 @@ ignore_docker_version: true
 ssh_key_path: {{ master_ssh_key_path }}
 network:
   plugin: {{ network_plugin }}
+  {{ network_plugin_options }}
 nodes:
   - address: {{ dns_hostname_0 }}
     user: {{ ssh_user_0 }}

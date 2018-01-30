@@ -2,9 +2,13 @@ import boto3
 import os
 import time
 from boto3.exceptions import Boto3Error
+import logging
 
 from cloud_provider import CloudProviderBase
 from node import Node
+
+logging.getLogger('boto3').setLevel(logging.CRITICAL)
+logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
 
 AWS_REGION = 'us-east-2'
@@ -16,7 +20,7 @@ AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
 AWS_CICD_INSTANCE_TAG = os.environ.get(
     "AWS_CICD_INSTANCE_TAG", 'rancher-validation')
 
-AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.micro')
+AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.medium')
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
         'image': 'ami-cf6c47aa', 'ssh_user': 'ubuntu'},
@@ -66,8 +70,15 @@ class AmazonWebServices(CloudProviderBase):
         image, ssh_user = self._select_ami(os_version, docker_version)
 
         if key_name:
-            ssh_key = self.get_ssh_key(key_name)
-            ssh_key_path = self.get_ssh_key_path(key_name),
+            # if cert private key
+            if key_name.endswith('.pem'):
+                ssh_key = self.get_ssh_key(key_name)
+                ssh_key_path = self.get_ssh_key_path(key_name)
+            else:
+                # get private key
+                ssh_key = self.get_ssh_key(key_name.replace('.pub', ''))
+                ssh_key_path = self.get_ssh_key_path(
+                    key_name.replace('.pub', ''))
         else:
             key_name = AWS_SSH_KEY_NAME.replace('.pem', '')
             ssh_key = self.master_ssh_key

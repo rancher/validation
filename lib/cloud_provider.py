@@ -41,12 +41,12 @@ class CloudProviderBase(object):
             run("chmod 0600 .ssh/{0}".format(ssh_key_name))
             run("cat .ssh/{}".format(ssh_key_name))
 
-    def generate_ssh_key(self, ssh_key_name):
+    def generate_ssh_key(self, ssh_key_name, ssh_key_passphrase=''):
         try:
             if not os.path.isfile('.ssh/{}'.format(ssh_key_name)):
                 run('mkdir -p .ssh && rm -rf .ssh/{}'.format(ssh_key_name))
-                run("ssh-keygen -N '' -C '{0}' -f .ssh/{0}".format(
-                    ssh_key_name))
+                run("ssh-keygen -N '{1}' -C '{0}' -f .ssh/{0}".format(
+                    ssh_key_name, ssh_key_passphrase))
                 run("chmod 0600 .ssh/{0}".format(ssh_key_name))
 
             public_ssh_key = self.get_ssh_key(ssh_key_name + '.pub')
@@ -60,4 +60,5 @@ class CloudProviderBase(object):
         return ssh_key
 
     def get_ssh_key_path(self, ssh_key_name):
-        return os.path.abspath('.ssh/{}'.format(ssh_key_name))
+        key_path = os.path.abspath('.ssh/{}'.format(ssh_key_name))
+        return key_path
