@@ -3,7 +3,7 @@ import time
 
 def create_and_validate(
     cloud_provider, rke_client, kubectl, rke_template, nodes,
-    base_namespace=None, network_validation=None, dns_validation=None,
+    base_namespace="ns", network_validation=None, dns_validation=None,
         teardown=False, remove_nodes=False):
 
     create_rke_cluster(rke_client, kubectl, nodes, rke_template)
