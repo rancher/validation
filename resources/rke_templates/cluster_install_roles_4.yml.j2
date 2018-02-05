@@ -6,16 +6,16 @@ network:
 nodes:
   - address: {{ ip_address_0 }}
     user: {{ ssh_user_0 }}
-    role: [controlplane]
+    role: [controlplane,etcd]
   - address: {{ ip_address_1 }}
     user: {{ ssh_user_1 }}
-    role: [etcd]
+    role: [etcd,worker]
   - address: {{ ip_address_2 }}
     user: {{ ssh_user_2 }}
-    role: [worker]
+    role: [controlplane,worker]
   - address: {{ ip_address_3 }}
     user: {{ ssh_user_3 }}
-    role: [worker]
+    role: [controlplane,etcd,worker]
 services:
   etcd:
     image: quay.io/coreos/etcd:latest

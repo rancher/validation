@@ -1,8 +1,37 @@
+import time
 
 
-def create_rke_cluster(rke_client, kubectl, nodes, rke_template):
+def create_and_validate(
+    cloud_provider, rke_client, kubectl, rke_template, nodes,
+    base_namespace=None, network_validation=None, dns_validation=None,
+        teardown=False, remove_nodes=False):
+
+    create_rke_cluster(rke_client, kubectl, nodes, rke_template)
+    network_validation, dns_validation = validate_rke_cluster(
+        rke_client, kubectl, nodes, base_ns=base_namespace,
+        network_validation=network_validation, dns_validation=dns_validation,
+        teardown=teardown)
+
+    if remove_nodes:
+        delete_nodes(cloud_provider, nodes)
+
+    return network_validation, dns_validation
+
+
+def delete_nodes(cloud_provider, nodes):
+    for node in nodes:
+        cloud_provider.delete_node(node)
+
+
+def create_rke_cluster(
+        rke_client, kubectl, nodes, rke_template, **rke_template_kwargs):
+    """
+    Creates a cluster and returns the rke config as a python dictionary
+    """
+
     # create rke cluster yml
-    config_yml, nodes = rke_client.build_rke_template(rke_template, nodes)
+    config_yml, nodes = rke_client.build_rke_template(
+        rke_template, nodes, **rke_template_kwargs)
 
     # run rke up
     result = rke_client.up(config_yml)
@@ -10,7 +39,8 @@ def create_rke_cluster(rke_client, kubectl, nodes, rke_template):
 
     # validate k8s reachable
     kubectl.kube_config_path = rke_client.kube_config_path()
-    return
+
+    return rke_client.convert_to_dict(config_yml)
 
 
 def validate_rke_cluster(rke_client, kubectl, nodes, base_ns='one',
@@ -48,18 +78,23 @@ def match_nodes(nodes, k8s_nodes):
     nodes_to_k8s_nodes[0][0] is the node object matched to
     nodes_to_k8s_nodes[0][1] is the k8s info for the same node
     """
+    k8s_node_names = []
+    for k8s_node in k8s_nodes['items']:
+        k8s_node_names.append(
+            k8s_node['metadata']['labels']['kubernetes.io/hostname'])
+
     nodes_to_k8s_nodes = []
     for node in nodes:
-        node_hostname = [node.public_ip_address, node.host_name]
         for k8s_node in k8s_nodes['items']:
             hostname = k8s_node['metadata']['labels']['kubernetes.io/hostname']
-            if hostname in node_hostname:
+            if hostname in node.node_name:
                 nodes_to_k8s_nodes.append((node, k8s_node))
                 break
         else:
             raise Exception(
-                "Did not find provisioned node's '{0}' corresponding node "
-                "resourse in cluster".format(node_hostname))
+                "Did not find provisioned node's '{0}' corresponding nodes "
+                "resourse in cluster: {1}".format(
+                    node.node_name, k8s_node_names))
     return nodes_to_k8s_nodes
 
 
@@ -84,6 +119,22 @@ def assert_containers_exist_for_roles(roles, containers):
             roles, missing_containers)
 
 
+def wait_for_etcd_cluster_health(node):
+    result = ''
+    etcd_tls_cmd = (
+        'etcdctl --endpoints "https://127.0.0.1:2379" --ca-file '
+        '/etc/kubernetes/ssl/kube-ca.pem --cert-file '
+        '/etc/kubernetes/ssl/kube-node.pem --key-file '
+        '/etc/kubernetes/ssl/kube-node-key.pem cluster-health')
+    start_time = time.time()
+    while start_time - time.time() < 120:
+        result = node.docker_exec('etcd', etcd_tls_cmd)
+        if 'cluster is healthy' in result:
+            break
+        time.sleep(5)
+    return result
+
+
 def validation_node_roles(nodes, k8s_nodes):
     """
     Validates each node's labels for match its roles
@@ -91,8 +142,6 @@ def validation_node_roles(nodes, k8s_nodes):
     Validates etcd etcdctl cluster-health command
     Validates worker nodes nginx-proxy conf file for controlplane ips
     """
-    # TODO: does hostname_override affect nginx-proxy controlplane ips?
-    # TODO: check taint for etcd only nodes ?
 
     role_matcher = {
         'worker': 'node-role.kubernetes.io/worker',
@@ -100,9 +149,12 @@ def validation_node_roles(nodes, k8s_nodes):
         'controlplane': 'node-role.kubernetes.io/master'}
 
     controlplane_ips = []
+    etcd_members = []
     for node in nodes:
         if 'controlplane' in node.roles:
-            controlplane_ips.append(node.host_name)
+            controlplane_ips.append(node.node_address)
+        if 'etcd' in node.roles:
+            etcd_members.append(node.node_address)
 
     nodes_to_k8s_nodes = match_nodes(nodes, k8s_nodes)
     for node, k8s_node in nodes_to_k8s_nodes:
@@ -120,18 +172,29 @@ def validation_node_roles(nodes, k8s_nodes):
                 result = node.docker_exec(
                     'nginx-proxy', 'cat /etc/nginx/nginx.conf')
                 for ip in controlplane_ips:
-                    assert 'server {0}:6443'.format(ip) in result, result
+                    assert 'server {0}:6443'.format(ip) in result, (
+                        "Expected to find all controlplane node addresses {0}"
+                        "in nginx.conf: {1}".format(controlplane_ips, result))
             if role == 'etcd':
                 if len(node.roles) == 1:
                     for taint in k8s_node['spec']['taints']:
                         if taint['key'] == 'node-role.kubernetes.io/etcd':
-                            assert taint['effect'] == 'NoSchedule', \
-                                "etcd-only node's taint is not 'NoSchedule'"
-                            break  # found, do not complete for loop
+                            assert taint['effect'] == 'NoExecute', (
+                                "{0} etcd-only node's taint is not 'NoExecute'"
+                                ": {1}".format(node.node_name, taint['effect'])
+                            )
+                            # found, do not complete for loop
+                            # or else an assertion will be raised
+                            break
                     else:
                         assert False, \
                             "Expected to find taint for etcd-only node"
-                result = node.docker_exec('etcd', 'etcdctl cluster-health')
+                # check etcd membership and cluster health
+                result = wait_for_etcd_cluster_health(node)
+                for member in etcd_members:
+                    expect = "got healthy result from https://{}".format(
+                        member)
+                    assert expect in result, result
                 assert 'cluster is healthy' in result, result
 
 
@@ -243,7 +306,6 @@ class DNSServiceDiscoveryValidation(object):
             }
         }
         self.pod_selector = 'k8s-app=pod-test-util'
-        self.exec_pod = 'pod-test-util'
         self.kubectl = kubectl
 
     def setup(self):
@@ -262,9 +324,10 @@ class DNSServiceDiscoveryValidation(object):
         assert result.ok, result.stderr
 
     def validate(self):
-        # wait for pods to be ready before validating
-        self.kubectl.wait_for_pods(
+        # wait for exec pod to be ready before validating
+        pods = self.kubectl.wait_for_pods(
             selector=self.pod_selector, namespace=self.namespace)
+        exec_pod_name = pods['items'][0]['metadata']['name']
 
         # Get Cluster IP and pod names per service
         dns_records = {}
@@ -288,7 +351,7 @@ class DNSServiceDiscoveryValidation(object):
             # Check dns resolution
             expected_ip = dns_info['ip']
             cmd = 'dig {0} +short'.format(dns_record)
-            result = self.kubectl.exec_cmd(self.exec_pod, cmd, self.namespace)
+            result = self.kubectl.exec_cmd(exec_pod_name, cmd, self.namespace)
             assert expected_ip in result.stdout, (
                 "Unable to test DNS resolution for service {0}: {1}".format(
                     dns_record, result.stderr))
@@ -296,7 +359,7 @@ class DNSServiceDiscoveryValidation(object):
             # Check Cluster IP reaches pods in service
             pods_names = dns_info['pods']
             cmd = 'curl "http://{0}/hostname"'.format(dns_record)
-            result = self.kubectl.exec_cmd(self.exec_pod, cmd, self.namespace)
+            result = self.kubectl.exec_cmd(exec_pod_name, cmd, self.namespace)
             assert result.stdout in pods_names, (
                 "Service ClusterIP does not reach pods {0}: {1}".format(
                     dns_record, result.stderr))
@@ -310,6 +373,55 @@ class DNSServiceDiscoveryValidation(object):
                 service_info['yml_file'], namespace=service_info['namespace'])
             self.kubectl.delete_resourse(
                 'namespace', service_info['namespace'])
+
+
+def validate_k8s_service_images(nodes, expected_images):
+    """
+    expected_images should be loaded from the rke cluster YAML
+    verifies that the nodes have the correct image version
+    This does not validate containers per role,
+    assert_containers_exist_for_roles method does that
+    """
+    for node in nodes:
+        containers = node.docker_ps()
+        for service, service_info in expected_images.iteritems():
+            if service in containers:
+                assert service_info['image'] == containers[service], (
+                    "Kubernetes service '{0}' does not match config version "
+                    "{1}, found {2} on node {3}".format(
+                        service, service_info['image'], containers[service],
+                        node.node_name))
+
+
+def validate_remove_cluster(nodes):
+    """
+    Removes all k8s services containers on each node:
+    ['kubelet', 'kube-proxy', 'scheduler', 'kube-controller',
+     'kube-api', 'nginx-proxy']
+    Removes files from these directories:
+    ['/etc/kubernetes/ssl', '/var/lib/etcd'
+     '/etc/cni', '/opt/cni', '/var/run/calico']
+    """
+    k8s_services = [
+        'kubelet', 'kube-proxy', 'scheduler', 'kube-controller',
+        'kube-api', 'nginx-proxy'
+    ]
+    rke_cleaned_directories = [
+        '/etc/kubernetes/ssl', '/var/lib/etcd' '/etc/cni', '/opt/cni',
+        '/var/run/calico'
+    ]
+    for node in nodes:
+        containers = node.docker_ps()
+        for service in k8s_services:
+            assert service not in containers.keys(), (
+                "Found kubernetes service '{0}' still running on node '{1}'"
+                .format(service, node.node_name))
+
+        for directory in rke_cleaned_directories:
+            result = node.execute_command('ls ' + directory)
+            assert result[0] == '', (
+                "Found a non-empty directory '{0}' after remove on node '{1}'"
+                .format(directory, node.node_name))
 
 
 def validate_dashboard(kubectl):

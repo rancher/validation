@@ -57,34 +57,7 @@ class KubectlClient(object):
         result = self.execute_kubectl_cmd(command, json_out=False)
         return result
 
-    def create_ns(self, namespace):
-        self.execute_kubectl_cmd("create namespace " + namespace)
-        # Verify namespace is created
-        result = self.execute_kubectl_cmd("get namespace " + namespace)
-        secret = self._load_json(result.stdout)
-        assert secret["metadata"]["name"] == namespace
-        assert secret["status"]["phase"] == "Active"
-        return secret
-
-    def create_resourse_from_yml(self, file_yml, namespace=None):
-        cmd = "create -f {0}".format(file_yml)
-        if namespace:
-            cmd += ' --namespace={0}'.format(namespace)
-        return self.execute_kubectl_cmd(cmd)
-
-    def delete_resourse_from_yml(self, file_yml, namespace=None):
-        cmd = "delete -f {0}".format(file_yml)
-        if namespace:
-            cmd += ' --namespace={0}'.format(namespace)
-        return self.execute_kubectl_cmd(cmd, json_out=False)
-
-    def delete_resourse(self, resource, resource_name, namespace=None):
-        cmd = "delete {0} {1}".format(resource, resource_name)
-        if namespace:
-            cmd += ' --namespace={0}'.format(namespace)
-        return self.execute_kubectl_cmd(cmd, json_out=False)
-
-    def get_all_ns(self):
+    def get_ns(self):
         result = self.execute_kubectl_cmd("get namespace")
         ns = self._load_json(result.stdout)
         return ns['items']
@@ -94,8 +67,49 @@ class KubectlClient(object):
         nodes = self._load_json(result.stdout)
         return nodes
 
+    def create_ns(self, namespace):
+        self.execute_kubectl_cmd("create namespace " + namespace)
+        # Verify namespace is created
+        result = self.execute_kubectl_cmd("get namespace " + namespace)
+        secret = self._load_json(result.stdout)
+        assert secret["metadata"]["name"] == namespace
+        assert secret["status"]["phase"] == "Active"
+        return secret
+
+    def run(self, name, image=None, port=None, namespace=None, as_user=None):
+        cmd = "run {0}".format(name)
+        if image:
+            cmd += ' --image={0}'.format(image)
+        if namespace:
+            cmd += ' --namespace={0}'.format(namespace)
+        if port:
+            cmd += ' --port={0}'.format(port)
+        if as_user:
+            cmd += ' --as={0}'.format(as_user)
+        return self.execute_kubectl_cmd(cmd, json_out=False)
+
+    def create_resourse_from_yml(self, file_yml, namespace=None):
+        cmd = "create -f {0}".format(file_yml)
+        if namespace:
+            cmd += ' --namespace={0}'.format(namespace)
+        return self.execute_kubectl_cmd(cmd)
+
+    def delete_resourse(self, resource, resource_name, namespace=None,
+                        as_user=None):
+        cmd = "delete {0} {1}".format(resource, resource_name)
+        if namespace:
+            cmd += ' --namespace={0}'.format(namespace)
+        return self.execute_kubectl_cmd(cmd, json_out=False)
+
+    def delete_resourse_from_yml(self, file_yml, namespace=None):
+        cmd = "delete -f {0}".format(file_yml)
+        if namespace:
+            cmd += ' --namespace={0}'.format(namespace)
+        return self.execute_kubectl_cmd(cmd, json_out=False)
+
     def get_resource(
-            self, resource, resource_name=None, namespace=None, selector=None):
+        self, resource, resource_name=None, namespace=None, selector=None,
+            as_user=None):
         cmd = "get {0}".format(resource)
         if resource_name:
             cmd += ' {0}'.format(resource_name)
@@ -103,6 +117,8 @@ class KubectlClient(object):
             cmd += ' --namespace={0}'.format(namespace)
         if selector:
             cmd += ' --selector={0}'.format(selector)
+        if as_user:
+            cmd += ' --as={0}'.format(as_user)
         result = self.execute_kubectl_cmd(cmd)
         return self._load_json(result.stdout)
 
@@ -113,9 +129,11 @@ class KubectlClient(object):
             pods = self.get_resource(
                 'pod', selector=selector, namespace=namespace)
             if len(pods.get('items', 0)) == number_of_pods:
-                print "Number of pods {0}".format(len(pods['items']))
                 for pod in pods['items']:
                     if pod['status']['phase'] != state:
+                        print "Pod '{0}' not {1} is {2}!".format(
+                            pod['metadata']['name'], state,
+                            pod['status']['phase'])
                         break
                 else:
                     time.sleep(5)

@@ -7,15 +7,18 @@ nodes:
   - address: {{ ip_address_0 }}
     user: {{ ssh_user_0 }}
     role: [controlplane]
+    internal_address: {{ internal_address_0 }}
+    hostname_override: {{ hostname_override_0 }}
   - address: {{ ip_address_1 }}
     user: {{ ssh_user_1 }}
     role: [etcd]
+    internal_address: {{ internal_address_1 }}
+    hostname_override: {{ hostname_override_1 }}
   - address: {{ ip_address_2 }}
     user: {{ ssh_user_2 }}
     role: [worker]
-  - address: {{ ip_address_3 }}
-    user: {{ ssh_user_3 }}
-    role: [worker]
+    internal_address: {{ internal_address_2 }}
+    hostname_override: {{ hostname_override_2 }}
 services:
   etcd:
     image: quay.io/coreos/etcd:latest

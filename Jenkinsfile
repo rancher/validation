@@ -13,7 +13,7 @@ node {
     stage('Run Validation Tests') {
       try {
         sh "docker run --name ${JOB_NAME}${env.BUILD_NUMBER}  --env-file .env " +
-           "rancher-validation-tests /bin/bash -c \'pytest -v -s --junit-xml=results.xml rke_tests/\'"
+           "rancher-validation-tests /bin/bash -c \'pytest -v -s --junit-xml=results.xml ${PYTEST_OPTIONS} rke_tests/\'"
       } catch(err) {
         echo 'Test run had failures. Collecting results...'
       }

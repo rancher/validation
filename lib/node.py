@@ -1,6 +1,10 @@
 import paramiko
 import json
 import time
+import logging
+
+
+logging.getLogger("paramiko").setLevel(logging.CRITICAL)
 
 
 class Node(object):
@@ -13,8 +17,9 @@ class Node(object):
         self.provider_node_id = provider_node_id
         # node name giving to k8s node, hostname override
         self.node_name = node_name
-        # FQDN, depending on the RKE config, this can be updated to be
-        # either the IP address or DNS resolvable name
+        # Depending on the RKE config, this can be updated to be
+        # either the internal IP, external IP address or FQDN name
+        self.node_address = None
         self.host_name = host_name
         self.host_name_override = host_name_override
         self.public_ip_address = public_ip_address

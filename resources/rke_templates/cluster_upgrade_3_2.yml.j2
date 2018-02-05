@@ -6,15 +6,9 @@ network:
 nodes:
   - address: {{ ip_address_0 }}
     user: {{ ssh_user_0 }}
-    role: [controlplane]
+    role: [controlplane,etcd]
   - address: {{ ip_address_1 }}
     user: {{ ssh_user_1 }}
-    role: [etcd]
-  - address: {{ ip_address_2 }}
-    user: {{ ssh_user_2 }}
-    role: [worker]
-  - address: {{ ip_address_3 }}
-    user: {{ ssh_user_3 }}
     role: [worker]
 services:
   etcd:
