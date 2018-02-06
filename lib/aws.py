@@ -23,15 +23,15 @@ AWS_CICD_INSTANCE_TAG = os.environ.get(
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.medium')
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
-        'image': 'ami-cf6c47aa', 'ssh_user': 'ubuntu'},
+        'image': 'ami-439aaf26', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-1.13.1": {
-        'image': 'ami-4c7c5729', 'ssh_user': 'ubuntu'},
+        'image': 'ami-9b84b1fe', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-17.03": {
-        'image': 'ami-a77259c2', 'ssh_user': 'ubuntu'},
+        'image': 'ami-3181b454', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-17.12": {
-        'image': 'ami-f9644e9c', 'ssh_user': 'ubuntu'},
+        'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-latest": {
-        'image': 'ami-f9644e9c', 'ssh_user': 'ubuntu'},
+        'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
     "rhel-7.4-docker-native": {
         'image': 'ami-1f6c477a', 'ssh_user': 'ec2-user'}}
 
