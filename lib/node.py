@@ -1,10 +1,14 @@
-import paramiko
 import json
-import time
 import logging
+import os
+import paramiko
+import time
 
 
 logging.getLogger("paramiko").setLevel(logging.CRITICAL)
+DOCKER_INSTALLED = os.environ.get("DOCKER_INSTALLED", "true")
+DOCKER_INSTALL_CMD = (
+    "curl https://releases.rancher.com/install-docker/{0}.sh | sh")
 
 
 class Node(object):
@@ -12,7 +16,8 @@ class Node(object):
         self, provider_node_id=None, host_name=None, node_name=None,
         public_ip_address=None, private_ip_address=None, state=None,
         labels=None, host_name_override=None, ssh_key=None,
-            ssh_key_name=None, ssh_key_path=None, ssh_user=None):
+        ssh_key_name=None, ssh_key_path=None, ssh_user=None,
+            os_version=None, docker_version=None):
 
         self.provider_node_id = provider_node_id
         # node name giving to k8s node, hostname override
@@ -28,6 +33,8 @@ class Node(object):
         self.ssh_key = ssh_key
         self.ssh_key_name = ssh_key_name
         self.ssh_key_path = ssh_key_path
+        self.os_version = os_version
+        self.docker_version = docker_version
         self.roles = None
         self.labels = labels or {}
         self.state = state
@@ -71,6 +78,20 @@ class Node(object):
             self._ssh_client.close()
         return result
 
+    def install_docker(self):
+        # TODO: Fix to install native on RHEL 7.4
+        command = (
+            "{} && sudo usermod -aG docker {} && sudo systemctl enable docker"
+            .format(
+                DOCKER_INSTALL_CMD.format(self.docker_version),
+                self.ssh_user))
+        return self.execute_command(command)
+
+    def ready_node(self):
+        self.wait_for_ssh_ready()
+        if DOCKER_INSTALLED.lower() == 'false':
+            self.install_docker()
+
     def docker_ps(self, all=False):
         result = self.execute_command(
             'docker ps --format "{{.Names}}\t{{.Image}}"')
@@ -109,20 +130,3 @@ class Node(object):
                 "Error:'docker exec' command received this stderr output: "
                 "{0}".format(result[1]))
         return result[0]
-
-
-def test_nodes(number_nodes):
-    """
-    Used to debug/test test framework code
-    """
-    nodes = []
-    for i in range(number_nodes):
-        nodes.append(Node(
-            ssh_user='ubuntu',
-            public_ip_address='{0}.{0}.{0}.{0}'.format(i + 1),
-            host_name='mydns.{0}'.format(i + 1),
-            ssh_key_path='my/own/key',
-            ssh_key='BEGIN\nsdasd\nEND',
-            private_ip_address='10.{0}.{0}.{0}'.format(i + 1)
-        ))
-    return nodes

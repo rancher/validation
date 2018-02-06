@@ -14,4 +14,6 @@ RUN wget https://github.com/rancher/rke/releases/download/$RKE_VERSION/rke_linux
     mv kubectl /bin/kubectl && \
     chmod +x /bin/kubectl  && \
     cd $WORKSPACE && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt && \
+    wget https://raw.githubusercontent.com/cncf/k8s-conformance/master/sonobuoy-conformance.yaml && \
+    mv sonobuoy-conformance.yaml $WORKSPACE/tests/kubernetes_conformance/resources/k8s_ymls/

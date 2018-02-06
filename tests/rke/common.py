@@ -201,7 +201,8 @@ def validation_node_roles(nodes, k8s_nodes):
 class PodIntercommunicationValidation(object):
     def __init__(self, kubectl, base_namespace):
         self.kubectl = kubectl
-        self.yml_file = 'resources/k8s_ymls/daemonset_pods_per_node.yml'
+        self.yml_file = (
+            'tests/rke/resources/k8s_ymls/daemonset_pods_per_node.yml')
         self.ns_out = 'daemonset-out-{}'.format(base_namespace)
         self.ns_in = 'daemonset-in-{}'.format(base_namespace)
         self.selector = 'name=daemonset-test1'
@@ -268,11 +269,16 @@ class PodIntercommunicationValidation(object):
         for pod_name in pod_names_to_ping_from:
             for pod_ip in pod_ips_to_ping:
                 cmd = 'ping -c 1 {0}'.format(pod_ip)
-                result = self.kubectl.exec_cmd(pod_name, cmd, self.ns_out)
-                assert expect_result in result.stdout, (
-                    "Could not ping pod with ip {0} from pod {1}:\n"
-                    "stdout: {2}\nstderr:{3}".format(
-                        pod_ip, pod_name, result.stdout, result.stderr))
+                for _ in range(10):
+                    result = self.kubectl.exec_cmd(pod_name, cmd, self.ns_out)
+                    if expect_result in result.stdout:
+                        break
+                    time.sleep(3)
+                else:
+                    assert expect_result in result.stdout, (
+                        "Could not ping pod with ip {0} from pod {1}:\n"
+                        "stdout: {2}\nstderr:{3}".format(
+                            pod_ip, pod_name, result.stdout, result.stderr))
 
     def teardown(self):
         """
@@ -297,12 +303,12 @@ class DNSServiceDiscoveryValidation(object):
             'k8test1': {
                 'namespace': namespace_one,
                 'selector': 'k8s-app=k8test1-service',
-                'yml_file': 'resources/k8s_ymls/service_k8test1.yml',
+                'yml_file': 'tests/rke/resources/k8s_ymls/service_k8test1.yml',
             },
             'k8test2': {
                 'namespace': namespace_two,
                 'selector': 'k8s-app=k8test2-service',
-                'yml_file': 'resources/k8s_ymls/service_k8test2.yml',
+                'yml_file': 'tests/rke/resources/k8s_ymls/service_k8test2.yml',
             }
         }
         self.pod_selector = 'k8s-app=pod-test-util'
@@ -319,7 +325,7 @@ class DNSServiceDiscoveryValidation(object):
             assert result.ok, result.stderr
 
         result = self.kubectl.create_resourse_from_yml(
-            'resources/k8s_ymls/single_pod.yml',
+            'tests/rke/resources/k8s_ymls/single_pod.yml',
             namespace=self.namespace)
         assert result.ok, result.stderr
 
@@ -336,8 +342,7 @@ class DNSServiceDiscoveryValidation(object):
             dns = "{0}.{1}.svc.cluster.local".format(
                 service_name, service_info['namespace'])
             svc = self.kubectl.get_resource(
-                'svc', resource_name=service_name,
-                namespace=service_info['namespace'])
+                'svc', name=service_name, namespace=service_info['namespace'])
             service_pods = self.kubectl.wait_for_pods(
                 selector=service_info['selector'],
                 namespace=service_info['namespace'], number_of_pods=2)
