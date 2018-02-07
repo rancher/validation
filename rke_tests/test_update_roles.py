@@ -71,7 +71,8 @@ def test_update_roles_2(test_name, cloud_provider, rke_client, kubectl):
         base_namespace='beforeupdate', network_validation=network,
         dns_validation=dns_discovery)
     # Create another validation setup on updated cluster
-    validate_rke_cluster(rke_client, kubectl, all_nodes, 'afterupdate1')
+    network_update1, dns_discovery_update1 = validate_rke_cluster(
+        rke_client, kubectl, all_nodes, 'afterupdate1')
 
     # Update removing original worker node, rerun on existing validation pods
     rke_template = 'cluster_update_roles_2_3.yml.j2'
@@ -81,7 +82,9 @@ def test_update_roles_2(test_name, cloud_provider, rke_client, kubectl):
         dns_validation=dns_discovery)
     # Create another validation setup on updated cluster
     validate_rke_cluster(
-        rke_client, kubectl, removed_node_nodes, 'afterupdate1')
+        rke_client, kubectl, removed_node_nodes, 'afterupdate1',
+        network_validation=network_update1,
+        dns_validation=dns_discovery_update1)
     validate_rke_cluster(
         rke_client, kubectl, removed_node_nodes, 'afterupdate2')
     delete_nodes(cloud_provider, all_nodes)
@@ -154,7 +157,8 @@ def test_update_roles_4(test_name, cloud_provider, rke_client, kubectl):
         base_namespace='beforeupdate', network_validation=network,
         dns_validation=dns_discovery)
     # Create another validation setup on updated cluster
-    validate_rke_cluster(rke_client, kubectl, all_nodes, 'afterupdate1')
+    network_update1, dns_discovery_update1 = validate_rke_cluster(
+        rke_client, kubectl, all_nodes, 'afterupdate1')
 
     # Update removing original controlplane node
     # rerun on existing validation pods
@@ -166,7 +170,9 @@ def test_update_roles_4(test_name, cloud_provider, rke_client, kubectl):
         dns_validation=dns_discovery)
     # Create another validation setup on updated cluster
     validate_rke_cluster(
-        rke_client, kubectl, removed_node_nodes, 'afterupdate1')
+        rke_client, kubectl, removed_node_nodes, 'afterupdate1',
+        network_validation=network_update1,
+        dns_validation=dns_discovery_update1)
     validate_rke_cluster(
         rke_client, kubectl, removed_node_nodes, 'afterupdate2')
     delete_nodes(cloud_provider, all_nodes)
@@ -288,9 +294,11 @@ def test_update_roles_8(test_name, cloud_provider, rke_client, kubectl):
     rke_template = 'cluster_update_roles_8_2.yml.j2'
     network, dns_discovery = create_and_validate(
         cloud_provider, rke_client, kubectl, rke_template, all_nodes,
-        base_namespace='beforeupdate')
+        base_namespace='beforeupdate', network_validation=network,
+        dns_validation=dns_discovery)
     # Create another validation setup on updated cluster
-    validate_rke_cluster(rke_client, kubectl, all_nodes, 'afterupdate1')
+    network_update1, dns_discovery_update1 = validate_rke_cluster(
+        rke_client, kubectl, all_nodes, 'afterupdate1')
 
     # Update remove original node with all roles
     rke_template = 'cluster_update_roles_8_1.yml.j2'
@@ -299,7 +307,9 @@ def test_update_roles_8(test_name, cloud_provider, rke_client, kubectl):
         base_namespace='beforeupdate', network_validation=network,
         dns_validation=dns_discovery)
     validate_rke_cluster(
-        rke_client, kubectl, removed_node_nodes, 'afterupdate1')
+        rke_client, kubectl, removed_node_nodes, 'afterupdate1',
+        network_validation=network_update1,
+        dns_validation=dns_discovery_update1)
     # Create another validation setup on updated cluster
     validate_rke_cluster(
         rke_client, kubectl, removed_node_nodes, 'afterupdate2')
