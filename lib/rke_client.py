@@ -42,7 +42,9 @@ class RKEClient(object):
         self._save_cluster_yml(yml_name, config_yml)
         cli_args = '' if config is None else ' --config {0}'.format(config)
         result = self._run("rke up {0}".format(cli_args))
-        print "RKE kube_config:\n{0}".format(self.get_kube_config_for_config())
+        if result.ok:
+            print "RKE kube_config:\n{0}".format(
+                self.get_kube_config_for_config())
         return result
 
     def remove(self, config=None):

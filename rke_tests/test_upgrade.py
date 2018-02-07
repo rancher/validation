@@ -40,7 +40,7 @@ def test_upgrade_1(test_name, cloud_provider, rke_client, kubectl):
     validate_rke_cluster(
         rke_client, kubectl, all_nodes, 'afterupgrade')
 
-    delete_nodes(all_nodes)
+    delete_nodes(cloud_provider, all_nodes)
 
 
 def test_upgrade_2(test_name, cloud_provider, rke_client, kubectl):
@@ -78,7 +78,7 @@ def test_upgrade_2(test_name, cloud_provider, rke_client, kubectl):
         network_validation=network, dns_validation=dns_discovery)
     validate_rke_cluster(
         rke_client, kubectl, all_nodes, 'afterupgrade')
-    delete_nodes(all_nodes)
+    delete_nodes(cloud_provider, all_nodes)
 
 
 def test_upgrade_3(test_name, cloud_provider, rke_client, kubectl):
@@ -114,7 +114,7 @@ def test_upgrade_3(test_name, cloud_provider, rke_client, kubectl):
         network_validation=network, dns_validation=dns_discovery)
     validate_rke_cluster(
         rke_client, kubectl, after_upgrade_nodes, 'afterupgrade')
-    delete_nodes(all_nodes)
+    delete_nodes(cloud_provider, all_nodes)
 
 
 def test_upgrade_4(test_name, cloud_provider, rke_client, kubectl):
@@ -148,4 +148,4 @@ def test_upgrade_4(test_name, cloud_provider, rke_client, kubectl):
     validate_rke_cluster(
         rke_client, kubectl, all_nodes, 'afterupgrade')
 
-    delete_nodes(all_nodes)
+    delete_nodes(cloud_provider, all_nodes)

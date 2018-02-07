@@ -50,12 +50,13 @@ class Node(object):
                     self._ssh_client.close()
                     return True
             except Exception as e:
+                self._ssh_client.close()
                 time.sleep(3)
                 logs_while_waiting += str(e) + '\n'
-            finally:
-                self._ssh_client.close()
-        raise Exception('Unable to connect to node by SSH: {0}'.format(
-            logs_while_waiting))
+                continue
+        raise Exception(
+            "Unable to connect to node '{0}' by SSH: {1}".format(
+                self.public_ip_address, logs_while_waiting))
 
     def execute_command(self, command):
         result = None
