@@ -8,6 +8,8 @@ from lib.kubectl_client import KubectlClient
 
 
 CLOUD_PROVIDER = os.environ.get("CLOUD_PROVIDER", 'AWS')
+TEMPLATE_PATH = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), 'resources/rke_templates')
 
 
 @pytest.fixture(scope='session')
@@ -18,7 +20,9 @@ def cloud_provider():
 
 @pytest.fixture(scope='function')
 def rke_client(cloud_provider):
-    return RKEClient(master_ssh_key_path=cloud_provider.master_ssh_key_path)
+    return RKEClient(
+        master_ssh_key_path=cloud_provider.master_ssh_key_path,
+        template_path=TEMPLATE_PATH)
 
 
 @pytest.fixture(scope='function')

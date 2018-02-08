@@ -8,21 +8,21 @@ from yaml import load
 
 
 logging.getLogger('invoke').setLevel(logging.WARNING)
+DEBUG = os.environ.get('DEBUG', 'false')
+
 DEFAULT_CONFIG_NAME = 'cluster.yml'
 DEFAULT_K8S_IMAGE = os.environ.get(
-    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.5-rancher4')
+    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.7-rancher1-1')
 DEFAULT_NETWORK_PLUGIN = os.environ.get('DEFAULT_NETWORK_PLUGIN', 'canal')
-TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                             '../resources/rke_templates')
-DEBUG = os.environ.get('DEBUG', 'false')
 
 
 class RKEClient(object):
     """
     Wrapper to interact with the RKE cli
     """
-    def __init__(self, master_ssh_key_path):
+    def __init__(self, master_ssh_key_path, template_path):
         self.master_ssh_key_path = master_ssh_key_path
+        self.template_path = template_path
         self._working_dir = tempfile.mkdtemp()
         self._hide = False if DEBUG.lower() == 'true' else True
 
@@ -52,6 +52,10 @@ class RKEClient(object):
         return result
 
     def build_rke_template(self, template, nodes, **kwargs):
+        """
+            This method builds RKE cluster.yml from a template,
+            and updates the list of nodes in update_nodes
+        """
         render_dict = {
             'master_ssh_key_path': self.master_ssh_key_path,
             'k8_rancher_image': DEFAULT_K8S_IMAGE,
@@ -73,7 +77,7 @@ class RKEClient(object):
             render_dict.update(node_dict)
             node_index += 1
         yml_contents = jinja2.Environment(
-            loader=jinja2.FileSystemLoader(TEMPLATE_PATH)
+            loader=jinja2.FileSystemLoader(self.template_path)
         ).get_template(template).render(render_dict)
         print "Generated cluster.yml contents:\n", yml_contents
         nodes = self.update_nodes(yml_contents, nodes)
