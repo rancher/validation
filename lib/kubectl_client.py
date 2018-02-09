@@ -175,10 +175,14 @@ class KubectlClient(object):
                     time.sleep(15)
                     return pods
             if int(time.time()) - start_time > 300:
+                pod_states = []
+                for p in pods.get('items', []):
+                    pod_states[p['metadata']['name']] = p['status']['phase']
                 raise Exception(
                     'Timeout Exception: pods did not start\n'
-                    'Expect number of pods {0} vs number of pods found {1}\n'
-                    .format(number_of_pods, len(pods['items'])))
+                    'Expect number of pods {0} vs number of pods found {1}:\n'
+                    'Pod states: {2}'.format(
+                        number_of_pods, len(pods['items'], pod_states)))
             time.sleep(5)
 
     def wait_for_pod(self, name, state='Running', **cli_options):
