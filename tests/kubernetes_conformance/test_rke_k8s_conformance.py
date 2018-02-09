@@ -30,7 +30,7 @@ def delete_all_jobs(kubectl):
 
 
 def run_conformance(kubectl, kube_config):
-    kubectl.kube_config = kube_config
+    kubectl.kube_config_path = kube_config
     delete_all_jobs(kubectl)
     kubectl.apply_conformance_tests()
     kubectl.wait_for_pod('sonobuoy', namespace='sonobuoy')
