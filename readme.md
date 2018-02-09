@@ -12,11 +12,13 @@ DOCKER_VERSION defaults to '1.12.6', Used to select image to use if DOCKER_INSTA
 DOCKER_INSTALLED defaults to 'true', When false, base image is used for OS_VERSION, and docker version DOCKER_VERSION is installed 
 
 ### AWS specific variables:
+```
 AWS_ACCESS_KEY_ID no default, Your AWS access key id
 AWS_SECRET_ACCESS_KEY no default, Your AWS secret access key
 AWS_SSH_KEY_NAME no default, the filename of the private key, e.i. jenkins-rke-validation.pem
 AWS_CICD_INSTANCE_TAG defaults to 'rancher-validation', Tags the instance with CICD=AWS_CICD_INSTANCE_TAG
 AWS_INSTANCE_TYPE defaults to 't2.medium', selects the instance type and size
+```
 
 ## RKE template defaults variables:
 DEFAULT_K8S_IMAGE defaults to 'rancher/k8s:v1.8.7-rancher1-1', defaults the templates service images
