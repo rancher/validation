@@ -7,9 +7,11 @@ If you add any new ENV variables, check the scripts/rke/configure.sh will pass t
 DEBUG defaults to 'false', Prints the output from kubectl and rke commands when 'true'
 
 ### Base Cloud Provider variables:
+```
 OS_VERSION defaults to 'ubuntu-16.04', Used to select which image to use
 DOCKER_VERSION defaults to '1.12.6', Used to select image to use if DOCKER_INSTALLED is 'true'
 DOCKER_INSTALLED defaults to 'true', When false, base image is used for OS_VERSION, and docker version DOCKER_VERSION is installed 
+```
 
 ### AWS specific variables:
 ```
