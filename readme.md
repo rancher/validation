@@ -23,8 +23,10 @@ AWS_INSTANCE_TYPE defaults to 't2.medium', selects the instance type and size
 ```
 
 ## RKE template defaults variables:
+```
 DEFAULT_K8S_IMAGE defaults to 'rancher/k8s:v1.8.7-rancher1-1', defaults the templates service images
 DEFAULT_NETWORK_PLUGIN defaults to 'canal', defaults the templates to use the select network plugin
+```
 
 ## Passing other pytest command line options
 In the Jenkins job parameters PYTEST_OPTIONS can be used to pass additional command line options to pytest like test filtering or run in parallel:
