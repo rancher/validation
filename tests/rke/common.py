@@ -146,7 +146,7 @@ def validation_node_roles(nodes, k8s_nodes):
     role_matcher = {
         'worker': 'node-role.kubernetes.io/worker',
         'etcd': 'node-role.kubernetes.io/etcd',
-        'controlplane': 'node-role.kubernetes.io/master'}
+        'controlplane': 'node-role.kubernetes.io/controlplane'}
 
     controlplane_ips = []
     etcd_members = []
@@ -229,7 +229,7 @@ class PodIntercommunicationValidation(object):
         worker_nodes = self.kubectl.get_resource(
             'nodes', selector='node-role.kubernetes.io/worker=true')
         master_nodes = self.kubectl.get_resource(
-            'nodes', selector='node-role.kubernetes.io/master=true')
+            'nodes', selector='node-role.kubernetes.io/controlplane=true')
         node_names = [n['metadata']['name'] for n in worker_nodes['items']]
         expected_number_pods = len(worker_nodes['items'])
         for master_node in master_nodes['items']:

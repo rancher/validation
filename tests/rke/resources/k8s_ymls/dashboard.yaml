@@ -77,7 +77,7 @@ spec:
       serviceAccountName: kubernetes-dashboard
       # Comment the following tolerations if Dashboard must not be deployed on master
       tolerations:
-      - key: node-role.kubernetes.io/master
+      - key: node-role.kubernetes.io/controlplane
         effect: NoSchedule
 ---
 # ------------------- Dashboard Service ------------------- #
