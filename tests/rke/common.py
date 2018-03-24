@@ -104,7 +104,7 @@ def assert_containers_exist_for_roles(roles, containers):
 
     # Add extra containers depending on roles present
     if 'controlplane' in roles:
-        expect_containers.extend(['scheduler', 'kube-controller', 'kube-api'])
+        expect_containers.extend(['kube-scheduler', 'kube-controller-manager', 'kube-apiserver'])
     else:
         expect_containers.extend(['nginx-proxy'])
     if 'etcd' in roles:
@@ -401,15 +401,15 @@ def validate_k8s_service_images(nodes, expected_images):
 def validate_remove_cluster(nodes):
     """
     Removes all k8s services containers on each node:
-    ['kubelet', 'kube-proxy', 'scheduler', 'kube-controller',
-     'kube-api', 'nginx-proxy']
+    ['kubelet', 'kube-proxy', 'kube-scheduler', 'kube-controller-manager',
+     'kube-apiserver', 'nginx-proxy']
     Removes files from these directories:
     ['/etc/kubernetes/ssl', '/var/lib/etcd'
      '/etc/cni', '/opt/cni', '/var/run/calico']
     """
     k8s_services = [
-        'kubelet', 'kube-proxy', 'scheduler', 'kube-controller',
-        'kube-api', 'nginx-proxy'
+        'kubelet', 'kube-proxy', 'kube-scheduler', 'kube-controller-manager',
+        'kube-apiserver', 'nginx-proxy'
     ]
     rke_cleaned_directories = [
         '/etc/kubernetes/ssl', '/var/lib/etcd' '/etc/cni', '/opt/cni',
