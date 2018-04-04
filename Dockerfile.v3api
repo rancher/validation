@@ -1,0 +1,14 @@
+FROM python:2.7.13
+
+ARG KUBECTL_VERSION=v1.9.0
+ENV WORKSPACE /src/rancher-validation
+WORKDIR $WORKSPACE
+ENV PYTHONPATH /src/rancher-validation
+
+COPY [".", "$WORKSPACE"]
+
+RUN wget https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERSION/bin/linux/amd64/kubectl && \
+    mv kubectl /bin/kubectl && \
+    chmod +x /bin/kubectl  && \
+    cd $WORKSPACE && \
+    pip install -r requirements_v3api.txt
