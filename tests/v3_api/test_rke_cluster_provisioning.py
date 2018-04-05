@@ -1,14 +1,34 @@
 from common import *
 from lib.aws import AmazonWebServices
 import pytest
+from threading import Thread
+
 
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.environ.get("AWS_REGION")
+AWS_SUBNET = os.environ.get("AWS_SUBNET")
+AWS_VPC = os.environ.get("AWS_VPC")
+AWS_SG = os.environ.get("AWS_SG")
+AWS_ZONE = os.environ.get("AWS_ZONE")
+AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE","")
+
 MACHINE_TIMEOUT = os.environ.get('MACHINE_TIMEOUT', "1200")
 
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "ignoreDockerVersion": False,
               "network": {"type": "networkConfig", "plugin": "canal"},
               "type": "rancherKubernetesEngineConfig"
+              }
+
+rke_config_aws_provider = {"authentication": {"type": "authnConfig", "strategy": "x509"},
+                           "ignoreDockerVersion": False,
+                           "network": {"type": "networkConfig", "plugin": "canal"},
+                           "type": "rancherKubernetesEngineConfig",
+                           "cloudProvider": {"name": "aws",
+                                             "type": "cloudProvider",
+                                             "awsCloudProvider": {"type": "awsCloudProvider"}}
               }
 
 if_stress_enabled = pytest.mark.skipif(
@@ -21,127 +41,49 @@ RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 
 
 def test_rke_do_host_1(node_template_do):
-    client = get_admin_client()
-    nodes = []
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "controlPlane": True,
-            "etcd": True,
-            "worker": True,
-            "quantity": 1,
-            "clusterId": None}
-    nodes.append(node)
-    cluster, node_pools = create_and_vaildate_cluster(client, nodes)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    validate_rke_dm_host_1(node_template_do, rke_config)
 
 
 def test_rke_do_host_2(node_template_do):
-    client = get_admin_client()
-    nodes = []
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "controlPlane": True,
-            "quantity": 1}
-    nodes.append(node)
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "etcd": True,
-            "quantity": 1}
-    nodes.append(node)
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "worker": True,
-            "quantity": 3}
-    nodes.append(node)
-    cluster, node_pools = create_and_vaildate_cluster(client, nodes)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    validate_rke_dm_host_2(node_template_do, rke_config)
 
 
 def test_rke_do_host_3(node_template_do):
-    client = get_admin_client()
-    nodes = []
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "controlPlane": True,
-            "quantity": 2}
-    nodes.append(node)
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "etcd": True,
-            "quantity": 3}
-    nodes.append(node)
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "worker": True,
-            "quantity": 3}
-    nodes.append(node)
-    cluster, node_pools = create_and_vaildate_cluster(client, nodes)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    validate_rke_dm_host_3(node_template_do, rke_config)
 
 
-@pytest.mark.skip("reason for skipping")
 def test_rke_do_host_4(node_template_do):
-    client = get_admin_client()
-
-    # Create cluster and add a node pool to this cluster
-    nodes = []
-    node_name = random_name()
-    node = {"hostnamePrefix": node_name,
-            "nodeTemplateId": node_template_do.id,
-            "requestedHostname": node_name,
-            "controlPlane": True,
-            "etcd": True,
-            "worker": True,
-            "quantity": 1}
-    nodes.append(node)
-    cluster, node_pools = create_and_vaildate_cluster(client, nodes)
-    assert len(cluster.nodes()) == 1
-    node1 = cluster.nodes()[0]
-    assert len(node_pools) == 1
-    node_pool = node_pools[0]
-
-    # Increase the scale of the node pool to 3
-    node_pool = client.update(node_pool, quantity=3)
-    """
-    for node in node_pool.nodes():
-        node = client.wait_success(node, timeout=m_timeout)
-        assert node.state == "active"
-    assert len(node_pool.nodes()) == 3
-    """
-    cluster = validate_cluster(client, cluster, check_intermediate_state=False)
-    nodes = client.list_node(clusterId=cluster.id)
-    assert len(nodes) == 3
-
-    # Delete node1
-    node1 = client.delete(node1)
-    cluster = validate_cluster(client, cluster, check_intermediate_state=False)
-    nodes = client.list_node(clusterId=cluster.id)
-    assert len(nodes) == 2
-    delete_cluster(client, cluster)
+    validate_rke_dm_host_4(node_template_do, rke_config)
 
 
-def test_rke_custom_host_docker_1():
+def test_rke_ec2_host_1(node_template_ec2):
+    validate_rke_dm_host_1(node_template_ec2, rke_config)
+
+
+def test_rke_ec2_host_2(node_template_ec2):
+    validate_rke_dm_host_2(node_template_ec2, rke_config)
+
+
+def test_rke_ec2_host_3(node_template_ec2):
+    validate_rke_dm_host_3(node_template_ec2, rke_config)
+
+
+def test_rke_ec2_host_with_aws_provider_1(node_template_ec2_with_provider):
+    validate_rke_dm_host_1(node_template_ec2_with_provider, rke_config_aws_provider)
+
+
+def test_rke_ec2_host_with_aws_provider_2(node_template_ec2_with_provider):
+    validate_rke_dm_host_2(node_template_ec2_with_provider, rke_config_aws_provider)
+
+
+def test_rke_ec2_host_4(node_template_ec2):
+    validate_rke_dm_host_4(node_template_ec2, rke_config)
+
+
+def test_rke_custom_host_1():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes\
-            (1, random_test_name("testcustom"))
-    aws_node = aws_nodes[0]
+            (3, random_test_name("testcustom"))
     node_roles = ["worker", "controlplane", "etcd"]
 
     client = get_admin_client()
@@ -149,9 +91,10 @@ def test_rke_custom_host_docker_1():
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
-    docker_run_cmd = \
-        get_custom_host_registration_cmd(client, cluster, node_roles)
-    aws_node.execute_command(docker_run_cmd)
+    for aws_node in aws_nodes:
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles, aws_node)
+        aws_node.execute_command(docker_run_cmd)
     cluster = validate_cluster(client, cluster)
     if RANCHER_CLEANUP_CLUSTER == "True":
         delete_cluster(client, cluster)
@@ -159,7 +102,7 @@ def test_rke_custom_host_docker_1():
 
 
 
-def test_rke_custom_host_docker_2():
+def test_rke_custom_host_2():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes\
             (5, random_test_name("testcustom"))
@@ -174,7 +117,7 @@ def test_rke_custom_host_docker_2():
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
-            get_custom_host_registration_cmd(client, cluster, node_roles[i])
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
@@ -183,7 +126,7 @@ def test_rke_custom_host_docker_2():
         delete_node(aws_nodes)
 
 
-def test_rke_custom_host_docker_3():
+def test_rke_custom_host_3():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes\
             (8, random_test_name("testcustom"))
@@ -200,10 +143,40 @@ def test_rke_custom_host_docker_3():
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
-            get_custom_host_registration_cmd(client, cluster, node_roles[i])
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
+
+
+def test_rke_custom_host_4():
+    aws_nodes = \
+        AmazonWebServices().create_multiple_nodes\
+            (8, random_test_name("testcustom"))
+    node_roles = [
+        {"roles":["controlplane"],"nodes":[aws_nodes[0],aws_nodes[1]]},
+        {"roles": ["etcd"], "nodes": [aws_nodes[2], aws_nodes[3],aws_nodes[4]]},
+        {"roles": ["worker"], "nodes": [aws_nodes[5], aws_nodes[6], aws_nodes[7]]}
+    ]
+    client = get_admin_client()
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
+    assert cluster.state == "active"
+    delay = 120
+    host_threads = []
+    for node_role in node_roles:
+        host_thread = Thread(target=register_host_after_delay,
+                             args=(client, cluster, node_role, delay))
+        host_threads.append(host_thread)
+        host_thread.start()
+        time.sleep(30)
+    for host_thread in host_threads:
+        host_thread.join()
+    cluster = validate_cluster(client, cluster, check_intermediate_state=False)
     if RANCHER_CLEANUP_CLUSTER == "True":
         delete_cluster(client, cluster)
         delete_node(aws_nodes)
@@ -226,53 +199,278 @@ def test_rke_custom_host_stress():
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
-            get_custom_host_registration_cmd(client, cluster, node_roles[i])
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
 
 
-@pytest.mark.skip("reason for skipping")
-def test_rke_custom_host_docker_4():
+def test_rke_custom_host_etcd_plane_changes():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes\
-            (2, random_test_name("testcustom"))
-    aws_node = aws_nodes[0]
-    node_roles = ["worker", "controlplane", "etcd"]
-
-    # Add node1 to cluster
+        AmazonWebServices().create_multiple_nodes \
+            (7, random_test_name("testcustom"))
+    node_roles = [["controlplane"], ["etcd"],
+                  ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=random_name())
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
-    docker_run_cmd = \
-        get_custom_host_registration_cmd(client, cluster, node_roles)
-    aws_node.execute_command(docker_run_cmd)
-    validate_cluster(client, cluster)
-    nodes = client.list_nodes(clusterId=cluster.id)
-    assert len(nodes) == 1
-    node1 = nodes[0]
-    assert nodes[0]["requestedHostname"] == aws_nodes[0].host_name
-    assert nodes[0]
+    i = 0
+    for i in range(0, 5):
+        aws_node = aws_nodes[i]
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+    cluster = validate_cluster(client, cluster)
+    etcd_nodes = get_role_nodes(cluster, "etcd")
+    assert len(etcd_nodes) == 1
 
-    # Add node2 to cluster
-    aws_node = aws_nodes[1]
-    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, node_roles)
+    # Add 1 more etcd node
+    aws_node = aws_nodes[5]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["etcd"], aws_node)
     aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 6)
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+    # Add 1 more etcd node
+    aws_node = aws_nodes[6]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["etcd"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 7)
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+    # Delete the first etcd node
+    node = client.delete(etcd_nodes[0])
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
+
+
+def test_rke_custom_host_etcd_plane_changes_1():
+    aws_nodes = \
+        AmazonWebServices().create_multiple_nodes \
+            (7, random_test_name("testcustom"))
+    node_roles = [["controlplane"], ["etcd"],
+                  ["worker"], ["worker"], ["worker"]]
+
+    client = get_admin_client()
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
+    assert cluster.state == "active"
+    i = 0
+    for i in range(0, 5):
+        aws_node = aws_nodes[i]
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+    cluster = validate_cluster(client, cluster)
+    etcd_nodes = get_role_nodes(cluster, "etcd")
+    assert len(etcd_nodes) == 1
+
+    # Add 2 more etcd node
+    aws_node = aws_nodes[5]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["etcd"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+
+    aws_node = aws_nodes[6]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["etcd"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+
+    wait_for_cluster_node_count(client, cluster, 7)
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+
+def test_rke_custom_host_control_plane_changes():
+    aws_nodes = \
+        aws_nodes = \
+        AmazonWebServices().create_multiple_nodes \
+            (6, random_test_name("testcustom"))
+    node_roles = [["controlplane"], ["etcd"],
+                  ["worker"], ["worker"], ["worker"]]
+
+    client = get_admin_client()
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
+    assert cluster.state == "active"
+    i = 0
+    for i in range(0, 5):
+        aws_node = aws_nodes[i]
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+    cluster = validate_cluster(client, cluster)
+    control_nodes = get_role_nodes(cluster, "control")
+    assert len(control_nodes) == 1
+
+    # Add 1 more control node
+    aws_node = aws_nodes[5]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["controlplane"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 6)
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+    # Delete the first control node
+    node = client.delete(control_nodes[0])
+    validate_cluster(client, cluster, intermediate_state="updating")
+
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
+
+
+def test_rke_custom_host_worker_plane_changes():
+    aws_nodes = \
+        AmazonWebServices().create_multiple_nodes \
+            (4, random_test_name("testcustom"))
+    node_roles = [["controlplane"], ["etcd"],
+                  ["worker"]]
+
+    client = get_admin_client()
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
+    assert cluster.state == "active"
+    i = 0
+    for i in range(0, 3):
+        aws_node = aws_nodes[i]
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+    cluster = validate_cluster(client, cluster)
+    worker_nodes = get_role_nodes(cluster, "worker")
+    assert len(worker_nodes) == 1
+
+    # Add 1 more worker node
+    aws_node = aws_nodes[3]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["worker"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 4)
     validate_cluster(client, cluster, check_intermediate_state=False)
 
-    nodes = client.list_nodes(clusterId=cluster.id)
-    assert len(nodes) == 2
+    # Delete the first worker node
+    node = client.delete(worker_nodes[0])
+    validate_cluster(client, cluster, check_intermediate_state=False)
+
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
+
+
+def validate_rke_dm_host_1(node_template, rancherKubernetesEngineConfig=rke_config):
+    client = get_admin_client()
+    nodes = []
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "controlPlane": True,
+            "etcd": True,
+            "worker": True,
+            "quantity": 1,
+            "clusterId": None}
+    nodes.append(node)
+    cluster, node_pools = create_and_vaildate_cluster(client, nodes, rancherKubernetesEngineConfig)
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+
+
+def validate_rke_dm_host_2(node_template, rancherKubernetesEngineConfig=rke_config):
+    client = get_admin_client()
+    nodes = []
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "controlPlane": True,
+            "quantity": 1}
+    nodes.append(node)
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "etcd": True,
+            "quantity": 1}
+    nodes.append(node)
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "worker": True,
+            "quantity": 3}
+    nodes.append(node)
+    cluster, node_pools = create_and_vaildate_cluster(client, nodes, rancherKubernetesEngineConfig)
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+
+
+def validate_rke_dm_host_3(node_template, rancherKubernetesEngineConfig=rke_config):
+    client = get_admin_client()
+    nodes = []
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "controlPlane": True,
+            "quantity": 2}
+    nodes.append(node)
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "etcd": True,
+            "quantity": 3}
+    nodes.append(node)
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "worker": True,
+            "quantity": 3}
+    nodes.append(node)
+    cluster, node_pools = create_and_vaildate_cluster(client, nodes, rancherKubernetesEngineConfig)
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+
+
+def validate_rke_dm_host_4(node_template, rancherKubernetesEngineConfig=rke_config):
+    client = get_admin_client()
+
+    # Create cluster and add a node pool to this cluster
+    nodes = []
+    node_name = random_name()
+    node = {"hostnamePrefix": node_name,
+            "nodeTemplateId": node_template.id,
+            "requestedHostname": node_name,
+            "controlPlane": True,
+            "etcd": True,
+            "worker": True,
+            "quantity": 1}
+    nodes.append(node)
+    cluster, node_pools = create_and_vaildate_cluster(client, nodes, rancherKubernetesEngineConfig)
+    assert len(cluster.nodes()) == 1
+    node1 = cluster.nodes()[0]
+    assert len(node_pools) == 1
+    node_pool = node_pools[0]
+
+    # Increase the scale of the node pool to 3
+    node_pool = client.update(node_pool, quantity=3)
+    cluster = validate_cluster(client, cluster, intermediate_state="updating")
+    nodes = client.list_node(clusterId=cluster.id)
+    assert len(nodes) == 3
 
     # Delete node1
     node1 = client.delete(node1)
-    validate_cluster(client, cluster, check_intermediate_state=False)
-    nodes = client.list_nodes(clusterId=cluster.id)
-    assert len(nodes) == 1
-    assert nodes[0]["requestedHostname"] == aws_nodes[1].host_name
-
-    delete_cluster(client, cluster)
-    delete_node(aws_nodes)
+    cluster = validate_cluster(client, cluster, intermediate_state="updating")
+    nodes = client.list_node(clusterId=cluster.id)
+    assert len(nodes) == 3
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
 
 
 def create_and_vaildate_cluster(client, nodes,
@@ -305,7 +503,7 @@ def create_and_vaildate_cluster(client, nodes,
 
 
 def validate_cluster(client, cluster, intermediate_state="provisioning",
-                     check_intermediate_state=True):
+                     check_intermediate_state=True, skipIngresscheck=False):
     if check_intermediate_state:
         cluster= wait_for_condition(
             client, cluster,
@@ -320,7 +518,29 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         timeout=m_timeout)
     assert cluster.state == "active"
     wait_for_nodes_to_become_active(client, cluster)
-    create_project_and_ns(ADMIN_TOKEN, cluster)
+    ## Create Daemon set workload and have an Ingress with Workload rule pointing to this daemonset
+    create_kubeconfig(cluster)
+    project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
+    con = [{"name": "test1",
+           "image": "sangeetha/testnewhostrouting"}]
+    name = random_test_name("default")
+    workload = p_client.create_workload(name=name,
+                                        containers=con,
+                                        namespaceId=ns.id,
+                                        daemonSetConfig={})
+    validate_workload(p_client, workload, "daemonSet", ns.name, len(get_schedulable_nodes(cluster)))
+    host = "test"+str(random_int(10000, 99999))+".com"
+    path = "/name.html"
+    rule = {"host": host,
+            "paths":
+                {path:
+                      {"workloadIds": [workload.id], "targetPort": "80"}}}
+    ingress = p_client.create_ingress(name=name,
+                                      namespaceId=ns.id,
+                                      rules=[rule])
+    if not skipIngresscheck:
+        validate_ingress(p_client, cluster, workload, host, path )
     return cluster
 
 
@@ -333,6 +553,18 @@ def wait_for_nodes_to_become_active(client, cluster):
             lambda x: x.state == "active",
             lambda x: 'State is: ' + x.state,
             timeout=m_timeout)
+
+
+def wait_for_cluster_node_count(client, cluster, expected_node_count, timeout=300):
+    start = time.time()
+    nodes = client.list_node(clusterId=cluster.id)
+    node_count = len(nodes)
+    while node_count != expected_node_count:
+        if time.time() - start > timeout:
+            raise AssertionError("Timed out waiting for state to get to active")
+        time.sleep(.5)
+        nodes = client.list_node(clusterId=cluster.id)
+        node_count = len(nodes)
 
 
 def random_name():
@@ -355,6 +587,67 @@ def node_template_do():
     return node_template
 
 
+@pytest.fixture(scope='session')
+def node_template_ec2():
+    client = get_admin_client()
+    amazonec2Config = {
+        "accessKey": AWS_ACCESS_KEY_ID,
+        "instanceType": "t2.medium",
+        "region": AWS_REGION,
+        "rootSize": "16",
+        "secretKey": AWS_SECRET_ACCESS_KEY,
+        "securityGroup": [AWS_SG],
+        "sshUser": "ubuntu",
+        "subnetId": AWS_SUBNET,
+        "usePrivateAddress": False,
+        "volumeType": "gp2",
+        "vpcId": AWS_VPC,
+        "zone": AWS_ZONE
+    }
+
+    node_template = client.create_node_template(
+        amazonec2Config=amazonec2Config,
+        name=random_name(),
+        namespaceId="fixme",
+        useInternalIpAddress=True,
+        driver="amazonec2",
+        engineInstallURL="https://releases.rancher.com/install-docker/17.03.sh"
+    )
+    node_template= client.wait_success(node_template)
+    return node_template
+
+
+@pytest.fixture(scope='session')
+def node_template_ec2_with_provider():
+    client = get_admin_client()
+    amazonec2Config = {
+        "accessKey": AWS_ACCESS_KEY_ID,
+        "instanceType": "t2.medium",
+        "region": AWS_REGION,
+        "rootSize": "16",
+        "secretKey": AWS_SECRET_ACCESS_KEY,
+        "securityGroup": [AWS_SG],
+        "sshUser": "ubuntu",
+        "subnetId": AWS_SUBNET,
+        "usePrivateAddress": False,
+        "volumeType": "gp2",
+        "vpcId": AWS_VPC,
+        "zone": AWS_ZONE,
+        "iamInstanceProfile": AWS_IAM_PROFILE
+    }
+
+    node_template = client.create_node_template(
+        amazonec2Config=amazonec2Config,
+        name=random_name(),
+        namespaceId="fixme",
+        useInternalIpAddress=True,
+        driver="amazonec2",
+        engineInstallURL="https://releases.rancher.com/install-docker/17.03.sh"
+    )
+    node_template= client.wait_success(node_template)
+    return node_template
+
+
 def delete_node(aws_nodes):
     for node in aws_nodes:
         AmazonWebServices().delete_node(node)
@@ -373,7 +666,7 @@ def delete_cluster(client, cluster):
     """
     
 
-def get_custom_host_registration_cmd(client, cluster, roles):
+def get_custom_host_registration_cmd(client, cluster, roles, node):
     allowed_roles = ["etcd", "worker", "controlplane"]
     cluster_tokens = client.list_cluster_registration_token(clusterId=cluster.id)
     if len(cluster_tokens) > 0:
@@ -384,6 +677,9 @@ def get_custom_host_registration_cmd(client, cluster, roles):
     for role in roles:
         assert role in allowed_roles
         cmd += " --"+role
+    additional_options = " --address " + node.public_ip_address + \
+                         " --internal-address " + node.private_ip_address
+    cmd += additional_options
     return cmd
 
 
@@ -392,3 +688,12 @@ def create_custom_host_registration_token(client, cluster):
     cluster_token = client.wait_success(cluster_token)
     assert cluster_token.state == 'active'
     return cluster_token
+
+
+def register_host_after_delay(client, cluster, node_role, delay):
+    aws_nodes = node_role["nodes"]
+    for aws_node in aws_nodes:
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_role["roles"], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+        time.sleep(delay)
