@@ -19,8 +19,9 @@ AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
 AWS_CICD_INSTANCE_TAG = os.environ.get(
     "AWS_CICD_INSTANCE_TAG", 'rancher-validation')
-
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.medium')
+AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE","")
+
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
         'image': 'ami-997347fc', 'ssh_user': 'ubuntu'},
@@ -110,21 +111,23 @@ class AmazonWebServices(CloudProviderBase):
             ssh_private_key_name = key_name
             ssh_private_key = self.master_ssh_key
             ssh_private_key_path = self.master_ssh_key_path
-
-        instance = self._client.run_instances(
-            ImageId=image,
-            InstanceType=AWS_INSTANCE_TYPE,
-            MinCount=1, MaxCount=1,
-            TagSpecifications=[{'ResourceType': 'instance', 'Tags': [
+        args = {"ImageId": image,
+            "InstanceType": AWS_INSTANCE_TYPE,
+            "MinCount": 1,
+            "MaxCount":1,
+            "TagSpecifications":[{'ResourceType': 'instance', 'Tags': [
                 {'Key': 'Name', 'Value': node_name},
                 {'Key': 'CICD', 'Value': AWS_CICD_INSTANCE_TAG}]}],
-            KeyName=key_name,
-            NetworkInterfaces=[{
+            "KeyName":key_name,
+            "NetworkInterfaces":[{
                 'DeviceIndex': 0,
                 'AssociatePublicIpAddress': True,
                 'Groups': AWS_SECURITY_GROUPS}],
-            Placement={'AvailabilityZone': AWS_REGION_AZ})
-
+            "Placement":{'AvailabilityZone': AWS_REGION_AZ},
+            }
+        if (len(AWS_IAM_PROFILE) > 0):
+            args["IamInstanceProfile"] = {'Name': AWS_IAM_PROFILE}
+        instance = self._client.run_instances(**args)
         node = Node(
             provider_node_id=instance['Instances'][0]['InstanceId'],
             state=instance['Instances'][0]['State']['Name'],
