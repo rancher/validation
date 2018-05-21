@@ -221,12 +221,15 @@ def validate_workload_with_sidekicks(p_client, workload, type , ns_name, pod_cou
         assert "running" in pod["status"]["containerStatuses"][1]["state"]
 
 
-def execute_kubectl_cmd(cmd, json_out=True):
+def execute_kubectl_cmd(cmd, json_out=True, stderr=False):
     command = 'kubectl --kubeconfig {0} {1}'.format(
         kube_fname, cmd)
     if json_out:
         command += ' -o json'
-    result = run_command(command)
+    if stderr:
+        result = run_command_with_stderr(command)
+    else:
+        result = run_command(command)
     if json_out:
         result = json.loads(result)
     print result
@@ -234,6 +237,10 @@ def execute_kubectl_cmd(cmd, json_out=True):
 
 
 def run_command(command):
+    return subprocess.check_output(command, shell=True)
+
+
+def run_command_with_stderr(command):
     try:
         output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
         returncode = 0
@@ -313,7 +320,8 @@ def validate_ingress(p_client, cluster, workload, host, path):
     pods = p_client.list_pod(workloadId=workload.id)
     target_name_list=[]
     for pod in pods:
-        target_name_list.append(pod.name.encode('UTF-8'))
+        target_name_list.append(pod.name)
+    print "target name list:" + str(target_name_list)
     for node in nodes:
         target_hit_list = target_name_list[:]
         host_ip = node.externalIpAddress
@@ -463,8 +471,7 @@ def check_connectivity_between_pods(pod1, pod2, password, allow_connectivity=Tru
 
 def kubectl_pod_exec(pod, cmd):
     command = "exec " + pod.name + " -n " + pod.namespaceId + " -- " + cmd
-    result = execute_kubectl_cmd(command, json_out=False)
-    return result
+    return execute_kubectl_cmd(command, json_out=False, stderr=True)
 
 
 def exec_shell_command(ip, port, cmd, password):

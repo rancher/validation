@@ -111,6 +111,7 @@ class AmazonWebServices(CloudProviderBase):
             ssh_private_key_name = key_name
             ssh_private_key = self.master_ssh_key
             ssh_private_key_path = self.master_ssh_key_path
+
         args = {"ImageId": image,
             "InstanceType": AWS_INSTANCE_TYPE,
             "MinCount": 1,
@@ -124,9 +125,11 @@ class AmazonWebServices(CloudProviderBase):
                 'AssociatePublicIpAddress': True,
                 'Groups': AWS_SECURITY_GROUPS}],
             "Placement":{'AvailabilityZone': AWS_REGION_AZ},
+            "BlockDeviceMappings": [{"DeviceName": "/dev/sda1","Ebs": {"VolumeSize": 50}}]
             }
         if (len(AWS_IAM_PROFILE) > 0):
             args["IamInstanceProfile"] = {'Name': AWS_IAM_PROFILE}
+
         instance = self._client.run_instances(**args)
         node = Node(
             provider_node_id=instance['Instances'][0]['InstanceId'],
