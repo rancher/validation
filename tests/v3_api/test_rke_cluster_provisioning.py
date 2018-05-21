@@ -14,8 +14,6 @@ AWS_SG = os.environ.get("AWS_SG")
 AWS_ZONE = os.environ.get("AWS_ZONE")
 AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE","")
 
-MACHINE_TIMEOUT = os.environ.get('MACHINE_TIMEOUT', "1200")
-
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "ignoreDockerVersion": False,
               "network": {"type": "networkConfig", "plugin": "canal"},
@@ -36,7 +34,6 @@ if_stress_enabled = pytest.mark.skipif(
     reason='Stress test not enabled')
 
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
-m_timeout = int(MACHINE_TIMEOUT)
 RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 
 
@@ -82,8 +79,8 @@ def test_rke_ec2_host_4(node_template_ec2):
 
 def test_rke_custom_host_1():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes\
-            (3, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            1, random_test_name("testcustom"))
     node_roles = ["worker", "controlplane", "etcd"]
 
     client = get_admin_client()
@@ -104,8 +101,8 @@ def test_rke_custom_host_1():
 
 def test_rke_custom_host_2():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes\
-            (5, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            5, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"],["worker"],["worker"]]
 
@@ -128,8 +125,8 @@ def test_rke_custom_host_2():
 
 def test_rke_custom_host_3():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes\
-            (8, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            8, random_test_name("testcustom"))
     node_roles = [
                      ["controlplane"], ["controlplane"],
                      ["etcd"], ["etcd"], ["etcd"],
@@ -154,8 +151,8 @@ def test_rke_custom_host_3():
 
 def test_rke_custom_host_4():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes\
-            (8, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            8, random_test_name("testcustom"))
     node_roles = [
         {"roles":["controlplane"],"nodes":[aws_nodes[0],aws_nodes[1]]},
         {"roles": ["etcd"], "nodes": [aws_nodes[2], aws_nodes[3],aws_nodes[4]]},
@@ -207,8 +204,8 @@ def test_rke_custom_host_stress():
 
 def test_rke_custom_host_etcd_plane_changes():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes \
-            (7, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            7, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -252,8 +249,8 @@ def test_rke_custom_host_etcd_plane_changes():
 
 def test_rke_custom_host_etcd_plane_changes_1():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes \
-            (7, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            7, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -288,8 +285,8 @@ def test_rke_custom_host_etcd_plane_changes_1():
 def test_rke_custom_host_control_plane_changes():
     aws_nodes = \
         aws_nodes = \
-        AmazonWebServices().create_multiple_nodes \
-            (6, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes (
+            6, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -326,8 +323,8 @@ def test_rke_custom_host_control_plane_changes():
 
 def test_rke_custom_host_worker_plane_changes():
     aws_nodes = \
-        AmazonWebServices().create_multiple_nodes \
-            (4, random_test_name("testcustom"))
+        AmazonWebServices().create_multiple_nodes(
+            4, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"]]
 
@@ -502,71 +499,6 @@ def create_and_vaildate_cluster(client, nodes,
     return cluster, node_pools
 
 
-def validate_cluster(client, cluster, intermediate_state="provisioning",
-                     check_intermediate_state=True, skipIngresscheck=False):
-    if check_intermediate_state:
-        cluster= wait_for_condition(
-            client, cluster,
-            lambda x: x.state == intermediate_state,
-            lambda x: 'State is: ' + x.state,
-            timeout=m_timeout)
-        assert cluster.state == intermediate_state
-    cluster = wait_for_condition(
-        client, cluster,
-        lambda x: x.state == "active",
-        lambda x: 'State is: ' + x.state,
-        timeout=m_timeout)
-    assert cluster.state == "active"
-    wait_for_nodes_to_become_active(client, cluster)
-    ## Create Daemon set workload and have an Ingress with Workload rule pointing to this daemonset
-    create_kubeconfig(cluster)
-    project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
-    p_client = get_project_client_for_token(project, ADMIN_TOKEN)
-    con = [{"name": "test1",
-           "image": "sangeetha/testnewhostrouting"}]
-    name = random_test_name("default")
-    workload = p_client.create_workload(name=name,
-                                        containers=con,
-                                        namespaceId=ns.id,
-                                        daemonSetConfig={})
-    validate_workload(p_client, workload, "daemonSet", ns.name, len(get_schedulable_nodes(cluster)))
-    host = "test"+str(random_int(10000, 99999))+".com"
-    path = "/name.html"
-    rule = {"host": host,
-            "paths":
-                {path:
-                      {"workloadIds": [workload.id], "targetPort": "80"}}}
-    ingress = p_client.create_ingress(name=name,
-                                      namespaceId=ns.id,
-                                      rules=[rule])
-    if not skipIngresscheck:
-        validate_ingress(p_client, cluster, workload, host, path )
-    return cluster
-
-
-def wait_for_nodes_to_become_active(client, cluster):
-    nodes = client.list_node(clusterId=cluster.id)
-    assert len(nodes) == len(nodes)
-    for node in nodes:
-        node = wait_for_condition(
-            client, node,
-            lambda x: x.state == "active",
-            lambda x: 'State is: ' + x.state,
-            timeout=m_timeout)
-
-
-def wait_for_cluster_node_count(client, cluster, expected_node_count, timeout=300):
-    start = time.time()
-    nodes = client.list_node(clusterId=cluster.id)
-    node_count = len(nodes)
-    while node_count != expected_node_count:
-        if time.time() - start > timeout:
-            raise AssertionError("Timed out waiting for state to get to active")
-        time.sleep(.5)
-        nodes = client.list_node(clusterId=cluster.id)
-        node_count = len(nodes)
-
-
 def random_name():
     return "test" + "-" + str(random_int(10000, 99999))
 
@@ -583,7 +515,7 @@ def node_template_do():
         driver="digitalocean",
         namespaceId="fixme",
         useInternalIpAddress=True)
-    node_template= client.wait_success(node_template)
+    node_template = client.wait_success(node_template)
     return node_template
 
 
@@ -651,43 +583,6 @@ def node_template_ec2_with_provider():
 def delete_node(aws_nodes):
     for node in aws_nodes:
         AmazonWebServices().delete_node(node)
-
-
-def delete_cluster(client, cluster):
-    # Delete Cluster
-    client.delete(cluster)
-    """
-    cluster = wait_for_condition(
-        client, cluster,
-        lambda x: x.state == "removed",
-        lambda x: 'State is: ' + x.state,
-        timeout=m_timeout)
-    assert cluster.state == "removed"
-    """
-    
-
-def get_custom_host_registration_cmd(client, cluster, roles, node):
-    allowed_roles = ["etcd", "worker", "controlplane"]
-    cluster_tokens = client.list_cluster_registration_token(clusterId=cluster.id)
-    if len(cluster_tokens) > 0:
-        cluster_token = cluster_tokens[0]
-    else:
-        cluster_token = create_custom_host_registration_token(client, cluster)
-    cmd = cluster_token.nodeCommand
-    for role in roles:
-        assert role in allowed_roles
-        cmd += " --"+role
-    additional_options = " --address " + node.public_ip_address + \
-                         " --internal-address " + node.private_ip_address
-    cmd += additional_options
-    return cmd
-
-
-def create_custom_host_registration_token(client, cluster):
-    cluster_token = client.create_cluster_registration_token(clusterId=cluster.id)
-    cluster_token = client.wait_success(cluster_token)
-    assert cluster_token.state == 'active'
-    return cluster_token
 
 
 def register_host_after_delay(client, cluster, node_role, delay):

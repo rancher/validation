@@ -95,6 +95,7 @@ def create_project_client(request):
     namespace["ns"] = ns
     namespace["cluster"] = cluster
     namespace["project"] = p
+
     def fin():
         client = get_admin_client()
         client.delete(namespace["project"])
