@@ -280,6 +280,9 @@ def test_rke_custom_host_etcd_plane_changes_1():
 
     wait_for_cluster_node_count(client, cluster, 7)
     validate_cluster(client, cluster, intermediate_state="updating")
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
 
 
 def test_rke_custom_host_control_plane_changes():
@@ -352,7 +355,58 @@ def test_rke_custom_host_worker_plane_changes():
 
     # Delete the first worker node
     node = client.delete(worker_nodes[0])
+    validate_cluster(client, cluster,  check_intermediate_state=False)
+
+    if RANCHER_CLEANUP_CLUSTER == "True":
+        delete_cluster(client, cluster)
+        delete_node(aws_nodes)
+
+
+def test_rke_custom_control_node_power_down():
+    aws_nodes = \
+        AmazonWebServices().create_multiple_nodes(
+            5, random_test_name("testcustom"))
+    node_roles = [["controlplane"], ["etcd"],
+                  ["worker"]]
+
+    client = get_admin_client()
+    cluster = client.create_cluster(name=random_name(),
+                                    driver="rancherKubernetesEngine",
+                                    rancherKubernetesEngineConfig=rke_config)
+    assert cluster.state == "active"
+    i = 0
+    for i in range(0, 3):
+        aws_node = aws_nodes[i]
+        docker_run_cmd = \
+            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+        aws_node.execute_command(docker_run_cmd)
+    cluster = validate_cluster(client, cluster)
+    control_nodes = get_role_nodes(cluster, "control")
+    assert len(control_nodes) == 1
+
+    # Add 1 more control node
+    aws_node = aws_nodes[3]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["controlplane"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 4)
     validate_cluster(client, cluster, check_intermediate_state=False)
+
+    # Power Down the first control node
+    aws_control_node = aws_nodes[0]
+    AmazonWebServices().stop_node(aws_control_node, wait_for_stopped=True)
+    control_node = control_nodes[0]
+    wait_for_node_status(client, control_node, "unavailable")
+    validate_cluster(client, cluster,  check_intermediate_state=False,
+                     nodes_not_in_active_state=[control_node.requestedHostname])
+
+
+    # Add 1 more worker node
+    aws_node = aws_nodes[4]
+    docker_run_cmd = get_custom_host_registration_cmd(client, cluster, ["worker"], aws_node)
+    aws_node.execute_command(docker_run_cmd)
+    wait_for_cluster_node_count(client, cluster, 4)
+    validate_cluster(client, cluster, check_intermediate_state=False)
+
 
     if RANCHER_CLEANUP_CLUSTER == "True":
         delete_cluster(client, cluster)
@@ -463,6 +517,8 @@ def validate_rke_dm_host_4(node_template, rancherKubernetesEngineConfig=rke_conf
 
     # Delete node1
     node1 = client.delete(node1)
+    wait_for_node_to_be_deleted(client,node1)
+
     cluster = validate_cluster(client, cluster, intermediate_state="updating")
     nodes = client.list_node(clusterId=cluster.id)
     assert len(nodes) == 3
