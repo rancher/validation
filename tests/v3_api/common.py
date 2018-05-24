@@ -340,7 +340,8 @@ def validate_ingress(p_client, cluster, workload, host, path):
 
 
 def validate_cluster(client, cluster, intermediate_state="provisioning",
-                     check_intermediate_state=True, skipIngresscheck=False):
+                     check_intermediate_state=True, skipIngresscheck=False,
+                     nodes_not_in_active_state=[]):
     if check_intermediate_state:
         cluster= wait_for_condition(
             client, cluster,
@@ -354,7 +355,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         lambda x: 'State is: ' + x.state,
         timeout=MACHINE_TIMEOUT)
     assert cluster.state == "active"
-    wait_for_nodes_to_become_active(client, cluster)
+    wait_for_nodes_to_become_active(client, cluster, exception_list=nodes_not_in_active_state)
     ## Create Daemon set workload and have an Ingress with Workload rule pointing to this daemonset
     create_kubeconfig(cluster)
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
@@ -381,15 +382,33 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     return cluster
 
 
-def wait_for_nodes_to_become_active(client, cluster):
+def wait_for_nodes_to_become_active(client, cluster, exception_list=[]):
     nodes = client.list_node(clusterId=cluster.id)
-    assert len(nodes) == len(nodes)
     for node in nodes:
-        node = wait_for_condition(
-            client, node,
-            lambda x: x.state == "active",
-            lambda x: 'State is: ' + x.state,
-            timeout=MACHINE_TIMEOUT)
+        if node.requestedHostname not in exception_list:
+            wait_for_node_status(client, node, "active")
+
+
+def wait_for_node_status(client, node, state):
+    node = wait_for_condition(
+        client, node,
+        lambda x: x.state == state,
+        lambda x: 'State is: ' + x.state,
+        timeout=MACHINE_TIMEOUT)
+    return node
+
+
+def wait_for_node_to_be_deleted(client, node, timeout=300):
+    uuid = node.uuid
+    start = time.time()
+    nodes = client.list_node(uuid=uuid)
+    node_count = len(nodes)
+    while node_count != 0:
+        if time.time() - start > timeout:
+            raise AssertionError("Timed out waiting for state to get to active")
+        time.sleep(.5)
+        nodes = client.list_node(uuid=uuid)
+        node_count = len(nodes)
 
 
 def wait_for_cluster_node_count(client, cluster, expected_node_count, timeout=300):
@@ -485,6 +504,7 @@ def exec_shell_command(ip, port, cmd, password):
 
 def wait_for_ns_to_become_active(client, ns, timeout=DEFAULT_TIMEOUT):
     start = time.time()
+    time.sleep(2)
     nss = client.list_namespace(uuid=ns.uuid)
     assert len(nss) == 1
     ns = nss[0]
@@ -507,3 +527,12 @@ def wait_for_pods_in_workload(p_client, workload, pod_count, timeout=DEFAULT_TIM
         time.sleep(.5)
         pods = p_client.list_pod(workloadId=workload.id)
     return pods
+
+
+def get_admin_client_and_cluster():
+    client = get_admin_client()
+    clusters = client.list_cluster()
+    assert len(clusters) > 0
+    cluster = clusters[0]
+    return client, cluster
+

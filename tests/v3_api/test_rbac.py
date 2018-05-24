@@ -11,11 +11,7 @@ user_password = "password"
 
 
 def test_rbac_cluster_owner():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
-
+    client, cluster = get_admin_client_and_cluster()
     user1, user1_token = create_user(client)
 
     ## Assert that user1 is not able to list cluster
@@ -30,11 +26,7 @@ def test_rbac_cluster_owner():
 
 
 def test_rbac_cluster_member():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
-
+    client, cluster = get_admin_client_and_cluster()
     user1, user1_token = create_user(client)
 
     ## Assert that user1 is not able to list cluster
@@ -49,11 +41,7 @@ def test_rbac_cluster_member():
 
 
 def test_rbac_project_owner():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
-
+    client, cluster = get_admin_client_and_cluster()
     # As admin user create a project and namespace
     a_p, a_ns = create_project_and_ns(ADMIN_TOKEN, cluster)
 
@@ -71,10 +59,7 @@ def test_rbac_project_owner():
 
 
 def test_rbac_project_member():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
 
     # As admin user create a project and namespace
     a_p, a_ns = create_project_and_ns(ADMIN_TOKEN, cluster)
@@ -94,10 +79,7 @@ def test_rbac_project_member():
 
 
 def test_rbac_change_cluster_owner_to_cluster_member():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
 
     user1, user1_token = create_user(client)
 
@@ -115,10 +97,7 @@ def test_rbac_change_cluster_owner_to_cluster_member():
 
 
 def test_rbac_change_cluster_member_to_cluster_owner():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
 
     user1, user1_token = create_user(client)
 
@@ -137,10 +116,7 @@ def test_rbac_change_cluster_member_to_cluster_owner():
 
 
 def test_rbac_change_project_owner_to_project_member():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
 
     # As admin user create a project and namespace
     a_p, a_ns = create_project_and_ns(ADMIN_TOKEN, cluster)
@@ -162,10 +138,7 @@ def test_rbac_change_project_owner_to_project_member():
 
 
 def test_rbac_change_project_member_to_project_cluster():
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) == 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
 
     # As admin user create a project and namespace
     a_p, a_ns = create_project_and_ns(ADMIN_TOKEN, cluster)
