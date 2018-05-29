@@ -13,6 +13,9 @@ AWS_VPC = os.environ.get("AWS_VPC")
 AWS_SG = os.environ.get("AWS_SG")
 AWS_ZONE = os.environ.get("AWS_ZONE")
 AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE","")
+AZURE_SUBSCRIPTION_ID = os.environ.get("AZURE_SUBSCRIPTION_ID")
+AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
+AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "ignoreDockerVersion": False,
@@ -35,6 +38,22 @@ if_stress_enabled = pytest.mark.skipif(
 
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
 RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
+
+
+def test_rke_az_host_1(node_template_az):
+    validate_rke_dm_host_1(node_template_az, rke_config)
+
+
+def test_rke_az_host_2(node_template_az):
+    validate_rke_dm_host_2(node_template_az, rke_config)
+
+
+def test_rke_az_host_3(node_template_az):
+    validate_rke_dm_host_3(node_template_az, rke_config)
+
+
+def test_rke_az_host_4(node_template_az):
+    validate_rke_dm_host_4(node_template_az, rke_config)
 
 
 def test_rke_do_host_1(node_template_do):
@@ -407,7 +426,6 @@ def test_rke_custom_control_node_power_down():
     wait_for_cluster_node_count(client, cluster, 4)
     validate_cluster(client, cluster, check_intermediate_state=False)
 
-
     if RANCHER_CLEANUP_CLUSTER == "True":
         delete_cluster(client, cluster)
         delete_node(aws_nodes)
@@ -558,6 +576,53 @@ def create_and_vaildate_cluster(client, nodes,
 def random_name():
     return "test" + "-" + str(random_int(10000, 99999))
 
+@pytest.fixture(scope='session')
+def node_template_az():
+    client = get_admin_client()
+    azConfig = {
+        "availabilitySet": "docker-machine",
+        "clientId": AZURE_CLIENT_ID,
+        "clientSecret": AZURE_CLIENT_SECRET,
+        "customData": "",
+        "dns": "",
+        "dockerPort": "2376",
+        "environment": "AzurePublicCloud",
+        "image": "canonical:UbuntuServer:16.04.0-LTS:latest",
+        "location": "westus",
+        "noPublicIp": False,
+        "openPort": [
+            "6443/tcp",
+            "2379/tcp",
+            "2380/tcp",
+            "8472/udp",
+            "4789/udp",
+            "10256/tcp",
+            "10250/tcp",
+            "10251/tcp",
+            "10252/tcp",
+            "80/tcp",
+            "443/tcp"
+        ],
+        "privateIpAddress": "",
+        "resourceGroup": "docker-machine",
+        "size": "Standard_A2",
+        "sshUser": "docker-user",
+        "staticPublicIp": False,
+        "storageType": "Standard_LRS",
+        "subnet": "docker-machine",
+        "subnetPrefix": "192.168.0.0/16",
+        "subscriptionId": AZURE_SUBSCRIPTION_ID,
+        "usePrivateIp": False,
+        "vnet": "docker-machine-vnet"
+    }
+    node_template = client.create_node_template(
+        azureConfig=azConfig,
+        name=random_name(),
+        driver="azure",
+        namespaceId="fixme",
+        useInternalIpAddress=True)
+    node_template = client.wait_success(node_template)
+    return node_template
 
 @pytest.fixture(scope='session')
 def node_template_do():
