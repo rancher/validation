@@ -254,6 +254,41 @@ def validate_workload_with_sidekicks(p_client, workload, type, ns_name,
         assert "running" in pod["status"]["containerStatuses"][1]["state"]
 
 
+def validate_workload_paused(p_client, workload, expectedstatus):
+    workloadStatus = p_client.list_workload(uuid=workload.uuid)[0].paused
+    assert workloadStatus == expectedstatus
+
+
+def validate_pod_images(expectedimage, workload, ns_name):
+    for key, value in workload.workloadLabels.iteritems():
+        label = key + "=" + value
+    get_pods = "get pods -l" + label + " -n " + ns_name
+    pods = execute_kubectl_cmd(get_pods)
+
+    for pod in pods["items"]:
+        assert pod["spec"]["containers"][0]["image"] == expectedimage
+
+
+def validate_pods_are_running_by_id(expectedpods, workload, ns_name):
+    for key, value in workload.workloadLabels.iteritems():
+        label = key + "=" + value
+    get_pods = "get pods -l" + label + " -n " + ns_name
+    pods = execute_kubectl_cmd(get_pods)
+
+    curpodnames = []
+    for pod in pods["items"]:
+        curpodnames.append(pod["metadata"]["name"])
+
+    for expectedpod in expectedpods["items"]:
+        assert expectedpod["metadata"]["name"] in curpodnames
+
+
+def validate_workload_image(client, workload, expectedImage, ns):
+    workload = client.list_workload(uuid=workload.uuid)[0]
+    assert workload.containers[0].image == expectedImage
+    validate_pod_images(expectedImage, workload, ns.name)
+
+
 def execute_kubectl_cmd(cmd, json_out=True, stderr=False):
     command = 'kubectl --kubeconfig {0} {1}'.format(
         kube_fname, cmd)
@@ -649,6 +684,28 @@ def wait_for_ns_to_become_active(client, ns, timeout=DEFAULT_TIMEOUT):
         assert len(nss) == 1
         ns = nss[0]
     return ns
+
+
+def wait_for_pod_images(p_client, workload, ns_name, expectedimage, numofpods,
+                        timeout=DEFAULT_TIMEOUT):
+    start = time.time()
+
+    for key, value in workload.workloadLabels.iteritems():
+        label = key + "=" + value
+    get_pods = "get pods -l" + label + " -n " + ns_name
+    pods = execute_kubectl_cmd(get_pods)
+
+    for x in range(0, numofpods-1):
+        pod = pods["items"][x]
+        podimage = pod["spec"]["containers"][0]["image"]
+        while podimage != expectedimage:
+            if time.time() - start > timeout:
+                raise AssertionError(
+                    "Timed out waiting for correct pod images")
+            time.sleep(.5)
+            pods = execute_kubectl_cmd(get_pods)
+            pod = pods["items"][x]
+            podimage = pod["spec"]["containers"][0]["image"]
 
 
 def wait_for_pods_in_workload(p_client, workload, pod_count,
