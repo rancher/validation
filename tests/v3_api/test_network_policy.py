@@ -1,6 +1,6 @@
-from common import *
+from common import *   # NOQA
 import pytest
-namespace = {"p_client": None, "ns": None, "cluster": None,  "project": None}
+namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 random_password = random_test_name("pass")
 
 
@@ -10,8 +10,8 @@ def test_connectivity_between_pods():
     cluster = namespace["cluster"]
 
     con = [{"name": "test1",
-           "image": "sangeetha/testclient:v2",
-           "ports":[],
+           "image": TEST_CLIENT_IMAGE+":v2",
+            "ports": [],
             "environment":{"ROOT_PASSWORD": random_password}
             }]
     name = random_test_name("default")
@@ -23,12 +23,15 @@ def test_connectivity_between_pods():
                                         containers=con,
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
-    validate_workload(p_client, workload, "daemonSet", ns.name, schedulable_node_count)
-    check_connectivity_between_workload_pods(p_client, workload, random_password)
+    validate_workload(p_client, workload, "daemonSet", ns.name,
+                      schedulable_node_count)
+    check_connectivity_between_workload_pods(p_client, workload,
+                                             random_password)
 
     # Create another namespace in the same project
     # Deploy workloads in this namespace
-    # Check that pods belonging to different namespace within the same project can communicate
+    # Check that pods belonging to different namespace within the
+    # same project can communicate
 
     c_client = get_cluster_client_for_token(cluster, ADMIN_TOKEN)
     ns1 = create_ns(c_client, cluster, namespace["project"])
@@ -36,14 +39,18 @@ def test_connectivity_between_pods():
                                          containers=con,
                                          namespaceId=ns1.id,
                                          daemonSetConfig={})
-    validate_workload(p_client, workload1, "daemonSet", ns1.name, schedulable_node_count)
+    validate_workload(p_client, workload1, "daemonSet", ns1.name,
+                      schedulable_node_count)
 
-    check_connectivity_between_workload_pods(p_client, workload1, random_password)
-    check_connectivity_between_workloads(p_client, workload, p_client, workload1, random_password)
+    check_connectivity_between_workload_pods(p_client, workload1,
+                                             random_password)
+    check_connectivity_between_workloads(p_client, workload, p_client,
+                                         workload1, random_password)
 
     # Create new project in the same cluster
     # Create namespace and deploy workloads
-    # Check that pods belonging to different namespace across different projects cannot communicate
+    # Check that pods belonging to different namespace across
+    # different projects cannot communicate
 
     p2, ns2 = create_project_and_ns(ADMIN_TOKEN, cluster)
     p2_client = get_project_client_for_token(p2, ADMIN_TOKEN)
@@ -52,11 +59,14 @@ def test_connectivity_between_pods():
                                           containers=con,
                                           namespaceId=ns2.id,
                                           daemonSetConfig={})
-    validate_workload(p2_client, workload2, "daemonSet", ns2.name, schedulable_node_count)
+    validate_workload(p2_client, workload2, "daemonSet", ns2.name,
+                      schedulable_node_count)
 
-    check_connectivity_between_workload_pods(p2_client, workload2, random_password)
-    check_connectivity_between_workloads(p_client, workload, p2_client, workload2,
-                                         random_password, allow_connectivity=False)
+    check_connectivity_between_workload_pods(
+        p2_client, workload2, random_password)
+    check_connectivity_between_workloads(
+        p_client, workload, p2_client, workload2,
+        random_password, allow_connectivity=False)
 
 
 @pytest.fixture(scope='module', autouse="True")
