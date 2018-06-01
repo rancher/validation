@@ -454,13 +454,14 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
 
 def validate_dns_record(pod, record, expected):
     #requires pod with `dig` available (sangeetha/testclient)
-    cmd = 'ping -c 1 -W 1 {0}.{1}.svc.cluster.local'.format(
+    host = '{0}.{1}.svc.cluster.local'.format(
         record["name"], record["namespaceId"])
+
+    cmd = 'ping -c 1 -W 1 {0}'.format(host)
     output = kubectl_pod_exec(pod, cmd)
     assert "0% packet loss" in str(output)
 
-    dig_cmd = 'dig {0}.{1}.svc.cluster.local +short'.format(
-        record["name"], record["namespaceId"])
+    dig_cmd = 'dig {0} +short'.format(host)
     output = kubectl_pod_exec(pod, dig_cmd)
 
     for expected_value in expected:
