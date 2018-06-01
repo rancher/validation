@@ -1,4 +1,4 @@
-from common import *
+from common import *   # NOQA
 from lib.aws import AmazonWebServices
 
 k8s_version = "v1.10.1-rancher1"
@@ -39,11 +39,9 @@ def validate_k8s_version(k8s_version, plugin="canal"):
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
             8, random_test_name("testcustom"))
-    node_roles = [
-                     ["controlplane"], ["controlplane"],
-                     ["etcd"], ["etcd"], ["etcd"],
-                     ["worker"], ["worker"], ["worker"]
-                  ]
+    node_roles = [["controlplane"], ["controlplane"],
+                  ["etcd"], ["etcd"], ["etcd"],
+                  ["worker"], ["worker"], ["worker"]]
     client = get_admin_client()
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
@@ -52,7 +50,8 @@ def validate_k8s_version(k8s_version, plugin="canal"):
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
-            get_custom_host_registration_cmd(client, cluster, node_roles[i], aws_node)
+            get_custom_host_registration_cmd(client, cluster,
+                                             node_roles[i], aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)

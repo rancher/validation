@@ -1,34 +1,35 @@
-from common import *
+from common import *   # NOQA
 import pytest
 
 
-namespace = {"p_client": None, "ns": None, "cluster": None,  "project": None}
+namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
 
 def test_wl_sidekick():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+           "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("sidekick")
     workload = p_client.create_workload(name=name,
                                         containers=con,
                                         namespaceId=ns.id)
     validate_workload(p_client, workload, "deployment", ns.name)
     side_con = {"name": "test2",
-                "image": "sangeetha/testnewhostrouting"}
+                "image": TEST_TARGET_IMAGE}
     con.append(side_con)
     workload = p_client.update(workload,
                                containers=con)
     time.sleep(60)
-    validate_workload_with_sidekicks(p_client, workload, "deployment", ns.name)
+    validate_workload_with_sidekicks(
+        p_client, workload, "deployment", ns.name)
 
 
 def test_wl_deployment():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+           "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -40,7 +41,7 @@ def test_wl_statefulset():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+           "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -55,30 +56,31 @@ def test_wl_daemonset():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+           "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     schedulable_node_count = len(get_schedulable_nodes(cluster))
-    validate_workload(p_client, workload, "daemonSet", ns.name, schedulable_node_count)
+    validate_workload(p_client, workload, "daemonSet",
+                      ns.name, schedulable_node_count)
 
 
 def test_wl_cronjob():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+           "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
                                         namespaceId=ns.id,
                                         cronJobConfig={
-                                            "concurrencyPolicy":"Allow",
-                                            "failedJobsHistoryLimit":10,
-                                            "schedule":"*/1 * * * *",
-                                            "successfulJobsHistoryLimit":10})
+                                            "concurrencyPolicy": "Allow",
+                                            "failedJobsHistoryLimit": 10,
+                                            "schedule": "*/1 * * * *",
+                                            "successfulJobsHistoryLimit": 10})
     validate_workload(p_client, workload, "cronJob", ns.name)
 
 
