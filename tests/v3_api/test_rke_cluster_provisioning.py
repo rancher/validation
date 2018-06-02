@@ -16,6 +16,7 @@ AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE", "")
 AZURE_SUBSCRIPTION_ID = os.environ.get("AZURE_SUBSCRIPTION_ID")
 AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
 AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
+AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 
 engine_install_url = "https://releases.rancher.com/install-docker/17.03.sh"
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
@@ -35,6 +36,23 @@ rke_config_aws_provider = {"authentication": {"type": "authnConfig",
                                              "awsCloudProvider":
                                                  {"type": "awsCloudProvider"}}
                            }
+
+
+rke_config_azure_provider = {"authentication": {"type": "authnConfig",
+                                                "strategy": "x509"},
+                             "ignoreDockerVersion": False,
+                             "network": {"type": "networkConfig",
+                                         "plugin": "canal"},
+                             "type": "rancherKubernetesEngineConfig",
+                             "cloudProvider": {
+                             "type": "cloudProvider",
+                             "name": "azure",
+                             "azureCloudProvider": {
+                               "aadClientId": AZURE_CLIENT_ID,
+                               "aadClientSecret": AZURE_CLIENT_SECRET,
+                               "subscriptionId": AZURE_SUBSCRIPTION_ID,
+                               "tenantId": AZURE_TENANT_ID}}
+                             }
 
 if_stress_enabled = pytest.mark.skipif(
     not os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT'),
@@ -58,6 +76,14 @@ def test_rke_az_host_3(node_template_az):
 
 def test_rke_az_host_4(node_template_az):
     validate_rke_dm_host_4(node_template_az, rke_config)
+
+
+def test_rke_az_host_with_provider_1(node_template_az):
+    validate_rke_dm_host_1(node_template_az, rke_config_azure_provider)
+
+
+def test_rke_az_host_with_provider_2(node_template_az):
+    validate_rke_dm_host_2(node_template_az, rke_config_azure_provider)
 
 
 def test_rke_do_host_1(node_template_do):
@@ -214,6 +240,7 @@ def test_rke_custom_host_4():
 def test_rke_custom_host_stress():
     aws_nodes = AmazonWebServices().create_multiple_nodes(
         worker_count + 4, random_test_name("teststress"))
+
     node_roles = [["controlplane"], ["etcd"], ["etcd"], ["etcd"]]
     worker_role = ["worker"]
     for int in range(0, worker_count):
@@ -327,6 +354,7 @@ def test_rke_custom_host_control_plane_changes():
         aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
             6, random_test_name("testcustom"))
+
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
