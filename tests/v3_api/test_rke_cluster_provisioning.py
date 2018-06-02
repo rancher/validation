@@ -354,6 +354,7 @@ def test_rke_custom_host_control_plane_changes():
         aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
             6, random_test_name("testcustom"))
+
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
