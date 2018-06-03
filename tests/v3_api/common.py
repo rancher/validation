@@ -84,7 +84,8 @@ def wait_for_condition(client, resource, check_function, fail_handler=None,
                 exceptionMsg = exceptionMsg + fail_handler(resource)
             raise Exception(exceptionMsg)
 
-        time.sleep(.5)
+        time.sleep(1)
+        print resource
         resource = client.reload(resource)
 
     return resource
@@ -335,7 +336,7 @@ def validate_ingress(p_client, cluster, workloads, host, path,
     if (insecure_redirect):
         curl_cmd = "curl -L --insecure "
     if len(host) > 0:
-        curl_cmd += " --header 'Host: "+host+"'"
+        curl_cmd += " --header 'Host: " + host + "'"
     nodes = get_schedulable_nodes(cluster)
     pods = []
     for workload in workloads:
@@ -351,7 +352,7 @@ def validate_ingress(p_client, cluster, workloads, host, path,
         for i in range(1, 20):
             if len(target_hit_list) == 0:
                 break
-            cmd = curl_cmd + " http://"+host_ip+path
+            cmd = curl_cmd + " http://" + host_ip + path
             print cmd
             result = run_command(cmd)
             result = result.rstrip()
@@ -363,7 +364,20 @@ def validate_ingress(p_client, cluster, workloads, host, path,
 
 
 def validate_ingress_using_endpoint(p_client, ingress, workloads,
-                                    timeout=300):
+                                    timeout=300,
+                                    ingressactivetimeout=10,
+                                    waitforingresslinktobefunctional=30):
+    ingress_state = "inactive"
+    start = time.time()
+    while ingress_state != "active":
+        print "Ingress State"
+        print ingress.state
+        if time.time() - start > ingressactivetimeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active state")
+        time.sleep(1)
+        ingress = p_client.reload(ingress)
+        ingress_state = ingress.state
     pods = []
     for workload in workloads:
         pod_list = p_client.list_pod(workloadId=workload.id)
@@ -382,7 +396,9 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
         time.sleep(.5)
         ingress_list = p_client.list_ingress(uuid=ingress.uuid)
         assert len(ingress_list) == 1
+        check_if_endpoint_is_available(p_client, ingress, 120)
         ingress = ingress_list[0]
+        ingress = p_client.reload(ingress)
         for public_endpoint in ingress.publicEndpoints:
             if public_endpoint["hostname"].startswith(ingress.name):
                 fqdn_available = True
@@ -391,9 +407,13 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
                     public_endpoint["hostname"]
                 if "path" in public_endpoint.keys():
                     url += public_endpoint["path"]
-    time.sleep(5)
+
     target_hit_list = target_name_list[:]
-    for i in range(1, 20):
+
+    # Wait for Ingress link to be functional
+    check_if_curl_link_is_functional(url, waitforingresslinktobefunctional)
+
+    for i in range(1, 50):
         if len(target_hit_list) == 0:
             break
         cmd = "curl " + url
@@ -401,10 +421,53 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
         result = run_command(cmd)
         result = result.rstrip()
         print result
-        assert result in target_name_list
         if result in target_hit_list:
+            assert result in target_name_list
             target_hit_list.remove(result)
+    print "Length of Target hit list"
+    print len(target_hit_list)
     assert len(target_hit_list) == 0
+
+
+def check_if_endpoint_is_available(client, ingress, timeout):
+    start = time.time()
+    ingressdata = []
+    print ingressdata
+    # Wait for ingress publicendpoints to get populated
+    while not ingressdata:
+        if time.time() - start > timeout:
+            exceptionMsg = 'Timeout waiting for ingress publicendpoints ' \
+                           'to get populated'
+            raise Exception(exceptionMsg)
+        time.sleep(.5)
+        client.reload(ingress)
+        key = "publicEndpoints"
+        ingress = client.reload(ingress)
+        if key in ingress:
+            ingressdata = ingress['publicEndpoints'][0]
+        else:
+            ingressdata = []
+    print ingressdata
+
+
+def check_if_curl_link_is_functional(url, waitforingresslinktobefunctional):
+    curlresult = False
+    start = time.time()
+    while not curlresult:
+        currenttime = time.time()
+        delta = currenttime - start
+        if delta > waitforingresslinktobefunctional:
+            exceptionMsg = 'Timeout waiting for ingress link to work'
+            raise Exception(exceptionMsg)
+        time.sleep(1)
+        cmd = "curl -I " + url
+        result = run_command(cmd)
+        result = result.rstrip()
+        successcode = "200"
+        print result
+        if successcode in result:
+            curlresult = True
+    return curlresult
 
 
 def validate_cluster(client, cluster, intermediate_state="provisioning",
