@@ -452,6 +452,30 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     return cluster
 
 
+def validate_dns_record(pod, record, expected):
+    # requires pod with `dig` available (sangeetha/testclient)
+    host = '{0}.{1}.svc.cluster.local'.format(
+        record["name"], record["namespaceId"])
+
+    cmd = 'ping -c 1 -W 1 {0}'.format(host)
+    ping_output = kubectl_pod_exec(pod, cmd)
+
+    ping_validation_pass = False
+    for expected_value in expected:
+        if expected_value in str(ping_output):
+            ping_validation_pass = True
+            break
+
+    assert ping_validation_pass is True
+    assert "0% packet loss" in str(ping_output)
+
+    dig_cmd = 'dig {0} +short'.format(host)
+    dig_output = kubectl_pod_exec(pod, dig_cmd)
+
+    for expected_value in expected:
+        assert expected_value in str(dig_output)
+
+
 def wait_for_nodes_to_become_active(client, cluster, exception_list=[]):
     nodes = client.list_node(clusterId=cluster.id)
     for node in nodes:
