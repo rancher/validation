@@ -1,12 +1,14 @@
-
-
 node {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
     checkout scm
 
     stage('Configure and Build') {
       sh "./tests/v3_api/scripts/configure.sh"
-      sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME} && chmod 400 .ssh/*"
+
+      if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
+        sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/{AWS_SSH_KEY_NAME} && chmod 400 .ssh/*"
+      }
+      
       sh "./tests/v3_api/scripts/build.sh"
     }
     try {
