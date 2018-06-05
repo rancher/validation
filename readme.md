@@ -13,13 +13,41 @@ DOCKER_VERSION defaults to '1.12.6', Used to select image to use if DOCKER_INSTA
 DOCKER_INSTALLED defaults to 'true', When false, base image is used for OS_VERSION, and docker version DOCKER_VERSION is installed 
 ```
 
+### Digital Ocean specific variables:
+```
+DO_ACCESS_KEY no default, your DO access key
+```
+
 ### AWS specific variables:
 ```
-AWS_ACCESS_KEY_ID no default, Your AWS access key id
-AWS_SECRET_ACCESS_KEY no default, Your AWS secret access key
+AWS_ACCESS_KEY_ID no default, your AWS access key id
+AWS_SECRET_ACCESS_KEY no default, your AWS secret access key
 AWS_SSH_KEY_NAME no default, the filename of the private key, e.i. jenkins-rke-validation.pem
 AWS_CICD_INSTANCE_TAG defaults to 'rancher-validation', Tags the instance with CICD=AWS_CICD_INSTANCE_TAG
 AWS_INSTANCE_TYPE defaults to 't2.medium', selects the instance type and size
+AWS_REGION no default, the region for your ec2 instances
+AWS_SUBNET no default, the subnet for your ec2 instances
+AWS_VPC no default, the VPC for your ec2 instances
+AWS_SG no default, the SG for your ec2 instances
+AWS_ZONE no default, the zone for your ec2 instances
+AWS_IAM_PROFILE no default, the IAM profile for your ec2 instances
+```
+
+### Azure specific variables:
+```
+AZURE_SUBSCRIPTION_ID no default, your Azure subscription id
+AZURE_CLIENT_ID no default, your app / client id
+AZURE_CLIENT_SECRET no default, your app / client secret
+AZURE_TENANT_ID no default your Azure tenant id, for use with Azure cloud provider
+```
+
+### v3_api test variables:
+```
+CATTLE_TEST_URL no default. The Rancher server for test execution.
+ADMIN_TOKEN no default. Required to create resources during test execution
+RANCHER_CLEANUP_CLUSTER default true. Cleans up clusters after test execution
+RANCHER_CLEANUP_PROJECT default true. Cleans up projects after test execution
+CLUSTER_NAME no default. Some tests allow test resources to be created in a specific cluster. If not provided, tests will default to the first cluster found.
 ```
 
 ## RKE template defaults variables:
