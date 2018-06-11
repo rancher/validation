@@ -2,7 +2,7 @@ from common import *    # NOQA
 import pytest
 import base64
 
-namespace = {"p_client": None, "ns": None, "cluster": None,  "project": None}
+namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
 
 def test_secret_create_all_ns():

@@ -300,7 +300,7 @@ def get_schedulable_nodes(cluster):
     nodes = client.list_node(clusterId=cluster.id)
     schedulable_nodes = []
     for node in nodes:
-        if node.controlPlane or node.worker:
+        if node.worker:
             schedulable_nodes.append(node)
     return schedulable_nodes
 

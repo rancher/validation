@@ -48,10 +48,10 @@ rke_config_azure_provider = {"authentication": {"type": "authnConfig",
                              "type": "cloudProvider",
                              "name": "azure",
                              "azureCloudProvider": {
-                               "aadClientId": AZURE_CLIENT_ID,
-                               "aadClientSecret": AZURE_CLIENT_SECRET,
-                               "subscriptionId": AZURE_SUBSCRIPTION_ID,
-                               "tenantId": AZURE_TENANT_ID}}
+                                 "aadClientId": AZURE_CLIENT_ID,
+                                 "aadClientSecret": AZURE_CLIENT_SECRET,
+                                 "subscriptionId": AZURE_SUBSCRIPTION_ID,
+                                 "tenantId": AZURE_TENANT_ID}}
                              }
 
 if_stress_enabled = pytest.mark.skipif(
