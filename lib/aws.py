@@ -42,7 +42,10 @@ PUBLIC_AMI = {
         "ubuntu-16.04": {
             'image': 'ami-965e6bf3', 'ssh_user': 'ubuntu'},
         "rhel-7.4": {
-            'image': 'ami-0b1e356e', 'ssh_user': 'ec2-user'}},
+            'image': 'ami-0b1e356e', 'ssh_user': 'ec2-user'},
+        "ros-1.4.0": {
+            'image': 'ami-504b7435', 'ssh_user': 'rancher'}}
+,
     'us-east-1': {
         "ubuntu-16.04": {
             'image': 'ami-cf6c47aa', 'ssh_user': 'ubuntu'},

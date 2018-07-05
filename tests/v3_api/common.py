@@ -9,13 +9,12 @@ import paramiko
 
 
 DEFAULT_TIMEOUT = 120
+
 CATTLE_TEST_URL = os.environ.get('CATTLE_TEST_URL', "http://localhost:80")
 ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', "None")
 
 CATTLE_API_URL = CATTLE_TEST_URL + "/v3"
 
-CATTLE_AUTH_URL = \
-    CATTLE_TEST_URL + "/v3-public/localproviders/local?action=login"
 kube_fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "k8s_kube_config")
 MACHINE_TIMEOUT = os.environ.get('MACHINE_TIMEOUT', "1200")
@@ -124,6 +123,21 @@ def create_project(client, cluster):
     return p
 
 
+def create_project_with_pspt(client, cluster, pspt):
+    p = client.create_project(name=random_name(),
+                              clusterId=cluster.id)
+    p = client.wait_success(p)
+    assert p.state == 'active'
+    return set_pspt_for_project(p, client, pspt)
+
+
+def set_pspt_for_project(project, client, pspt):
+    project.setpodsecuritypolicytemplate(podSecurityPolicyTemplateId=pspt.id)
+    project = client.wait_success(project)
+    assert project.state == 'active'
+    return project
+
+
 def create_ns(client, cluster, project):
     ns = client.create_namespace(name=random_name(),
                                  clusterId=cluster.id,
@@ -175,6 +189,14 @@ def create_kubeconfig(cluster):
     file = open(kube_fname, "w")
     file.write(generateKubeConfigOutput.config)
     file.close()
+
+
+def validate_psp_error_worklaod(p_client, workload, error_message):
+    workload = wait_for_wl_transitioning(p_client, workload)
+    assert workload.state == "updating"
+    assert workload.transitioning == "error"
+    print workload.transitioningMessage
+    assert error_message in workload.transitioningMessage
 
 
 def validate_workload(p_client, workload, type, ns_name, pod_count=1,
@@ -269,6 +291,23 @@ def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
     assert len(workloads) == 1
     wl = workloads[0]
     while wl.state != "active":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(.5)
+        workloads = client.list_workload(uuid=workload.uuid)
+        assert len(workloads) == 1
+        wl = workloads[0]
+    return wl
+
+
+def wait_for_wl_transitioning(client, workload, timeout=DEFAULT_TIMEOUT,
+                              state="error"):
+    start = time.time()
+    workloads = client.list_workload(uuid=workload.uuid)
+    assert len(workloads) == 1
+    wl = workloads[0]
+    while wl.transitioning != state:
         if time.time() - start > timeout:
             raise AssertionError(
                 "Timed out waiting for state to get to active")
@@ -410,21 +449,11 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
 def validate_cluster(client, cluster, intermediate_state="provisioning",
                      check_intermediate_state=True, skipIngresscheck=False,
                      nodes_not_in_active_state=[]):
-    if check_intermediate_state:
-        cluster = wait_for_condition(
-            client, cluster,
-            lambda x: x.state == intermediate_state,
-            lambda x: 'State is: ' + x.state,
-            timeout=MACHINE_TIMEOUT)
-        assert cluster.state == intermediate_state
-    cluster = wait_for_condition(
+    validate_cluster_state(
         client, cluster,
-        lambda x: x.state == "active",
-        lambda x: 'State is: ' + x.state,
-        timeout=MACHINE_TIMEOUT)
-    assert cluster.state == "active"
-    wait_for_nodes_to_become_active(client, cluster,
-                                    exception_list=nodes_not_in_active_state)
+        check_intermediate_state=check_intermediate_state,
+        intermediate_state=intermediate_state,
+        nodes_not_in_active_state=[nodes_not_in_active_state])
     # Create Daemon set workload and have an Ingress with Workload
     # rule pointing to this daemonset
     create_kubeconfig(cluster)
@@ -439,15 +468,16 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
                                         daemonSetConfig={})
     validate_workload(p_client, workload, "daemonSet", ns.name,
                       len(get_schedulable_nodes(cluster)))
-    host = "test"+str(random_int(10000, 99999))+".com"
-    path = "/name.html"
-    rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
-    p_client.create_ingress(name=name,
-                            namespaceId=ns.id,
-                            rules=[rule])
     if not skipIngresscheck:
+        host = "test"+str(random_int(10000, 99999))+".com"
+        path = "/name.html"
+        rule = {"host": host,
+                "paths":
+                    {path: {
+                        "workloadIds": [workload.id], "targetPort": "80"}}}
+        p_client.create_ingress(name=name,
+                                namespaceId=ns.id,
+                                rules=[rule])
         validate_ingress(p_client, cluster, [workload], host, path)
     return cluster
 
@@ -639,3 +669,24 @@ def get_admin_client_and_cluster():
     assert len(clusters) > 0
     cluster = clusters[0]
     return client, cluster
+
+
+def validate_cluster_state(client, cluster,
+                           check_intermediate_state=True,
+                           intermediate_state="provisioning",
+                           nodes_not_in_active_state=[]):
+    if check_intermediate_state:
+        cluster = wait_for_condition(
+            client, cluster,
+            lambda x: x.state == intermediate_state,
+            lambda x: 'State is: ' + x.state,
+            timeout=MACHINE_TIMEOUT)
+        assert cluster.state == intermediate_state
+    cluster = wait_for_condition(
+        client, cluster,
+        lambda x: x.state == "active",
+        lambda x: 'State is: ' + x.state,
+        timeout=MACHINE_TIMEOUT)
+    assert cluster.state == "active"
+    wait_for_nodes_to_become_active(client, cluster,
+                                    exception_list=nodes_not_in_active_state)
