@@ -228,7 +228,7 @@ def test_ingress_scale_up_target():
                             rules=[rule])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], host, path)
-    workload = p_client.update(workload, scale=4)
+    workload = p_client.update(workload, scale=4, containers=con)
     validate_workload(p_client, workload, "deployment", ns.name, pod_count=4)
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], host, path)
@@ -258,6 +258,7 @@ def test_ingress_upgrade_target():
                      [workload], host, path)
     con["environment"] = {"test1": "value1"}
     workload = p_client.update(workload, containers=[con])
+    wait_for_pods_in_workload(p_client, workload, pod_count=2)
     validate_workload(p_client, workload, "deployment", ns.name, pod_count=2)
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], host, path)

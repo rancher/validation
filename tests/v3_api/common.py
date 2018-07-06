@@ -422,14 +422,15 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
         ingress_list = p_client.list_ingress(uuid=ingress.uuid)
         assert len(ingress_list) == 1
         ingress = ingress_list[0]
-        for public_endpoint in ingress.publicEndpoints:
-            if public_endpoint["hostname"].startswith(ingress.name):
-                fqdn_available = True
-                url = \
-                    public_endpoint["protocol"].lower() + "://" + \
-                    public_endpoint["hostname"]
-                if "path" in public_endpoint.keys():
-                    url += public_endpoint["path"]
+        if hasattr(ingress, 'publicEndpoints'):
+            for public_endpoint in ingress.publicEndpoints:
+                if public_endpoint["hostname"].startswith(ingress.name):
+                    fqdn_available = True
+                    url = \
+                        public_endpoint["protocol"].lower() + "://" + \
+                        public_endpoint["hostname"]
+                    if "path" in public_endpoint.keys():
+                        url += public_endpoint["path"]
     time.sleep(5)
     target_hit_list = target_name_list[:]
     for i in range(1, 20):
