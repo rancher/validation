@@ -57,8 +57,8 @@ def test_deploy_rancher_server():
         aws_node.execute_command(docker_run_cmd)
         i += 1
     validate_cluster_state(client, cluster)
-    env_details = "env.CATTLE_TEST_URL=" + RANCHER_SERVER_URL + "\n"
-    env_details += "env.ADMIN_TOKEN=" + token + "\n"
+    env_details = "env.CATTLE_TEST_URL='" + RANCHER_SERVER_URL + "'\n"
+    env_details += "env.ADMIN_TOKEN='" + token + "'\n"
     file = open(env_file, "w")
     file.write(env_details)
     file.close()
