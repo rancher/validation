@@ -88,9 +88,9 @@ def test_enable_nestedgroup_for_openldap_set_access_control_required():
     validate_access_control_enable_nestedgroup(access_mode)
 
 
-def test_enable_nestedgroup_for_openldap_set_access_control_restricted():
-    access_mode = "restricted"
-    validate_access_control_enable_nestedgroup(access_mode)
+# def test_enable_nestedgroup_for_openldap_set_access_control_restricted():
+#     access_mode = "restricted"
+#     validate_access_control_enable_nestedgroup(access_mode)
 
 
 # def test_enable_nestedgroup_for_ad_set_access_control_required():
@@ -343,7 +343,7 @@ def enable_openldap(username, token, expected_status=200):
             "testAndApply": CATTLE_AUTH_TEST_AND_APPLY_URL
         },
         "baseType": "authConfig",
-        "connectionTimeout": 1000,
+        "connectionTimeout": 5000,
         "creatorId": None,
         "enabled": True,
         "serviceAccountPassword": "cattle",
@@ -393,7 +393,7 @@ def disable_openldap(username, token, expected_status=200):
             "testAndApply": CATTLE_AUTH_TEST_AND_APPLY_URL
         },
         "baseType": "authConfig",
-        "connectionTimeout": 1000,
+        "connectionTimeout": 5000,
         "creatorId": None,
         "enabled": False,
         "serviceAccountPassword": "cattle",
@@ -443,7 +443,7 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
             "testAndApply": CATTLE_AUTH_TEST_AND_APPLY_URL
         },
         "baseType": "authConfig",
-        "connectionTimeout": 1000,
+        "connectionTimeout": 5000,
         "creatorId": None,
         "enabled": True,
         "serviceAccountPassword": "cattle",
