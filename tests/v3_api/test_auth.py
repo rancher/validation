@@ -98,13 +98,20 @@ def test_disable_and_enable_nestedgroups_set_access_control_required():
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
 
 
-def test_disable_and_enable_nestedgroup_for_openldap_set_access_control_restricted():
+def test_disable_and_enable_nestedgroup_set_access_control_restricted():
     access_mode = "restricted"
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
 
 
 def test_ad_service_account_login():
+    delete_project_users()
+    delete_cluster_users()
+    auth_setup_data = setup["auth_setup_data"]
+    admin_user = auth_setup_data["admin_user"]
+    admin_token = login(admin_user, PASSWORD)
     if AUTH_PROVIDER == "activeDirectory":
+        disable_ad(admin_user, admin_token)
+        enable_ad(admin_user, admin_token)
         login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
 
 
