@@ -5,8 +5,18 @@ import pytest
 import json
 
 AUTH_PROVIDER = os.environ.get('RANCHER_AUTH_PROVIDER', "")
-AD_PERMISSION_DENIED_CODE = 401
-LDAP_PERMISSION_DENIED_CODE = 403
+
+# Config Fields
+HOSTNAME_OR_IP_ADDRESS = os.environ.get("HOSTNAME_OR_IP_ADDRESS")
+PORT = os.environ.get("PORT")
+TLS = os.environ.get("TLS")
+CA_CERTIFICATE = os.environ.get("CA_CERTIFICATE")
+CONNECTION_TIMEOUT = os.environ.get("CONNECTION_TIMEOUT")
+SERVICE_ACCOUNT_NAME = os.environ.get("SERVICE_ACCOUNT_NAME")
+SERVICE_ACCOUNT_PASSWORD = os.environ.get("SERVICE_ACCOUNT_PASSWORD")
+DEFAULT_LOGIN_DOMAIN = os.environ.get("DEFAULT_LOGIN_DOMAIN")
+USER_SEARCH_BASE = os.environ.get("USER_SEARCH_BASE")
+GROUP_SEARCH_BASE = os.environ.get("GROUP_SEARCH_BASE")
 PASSWORD = os.environ.get('RANCHER_USER_PASSWORD', "")
 
 
@@ -20,6 +30,9 @@ CATTLE_AUTH_PROVIDER_URL = \
 
 CATTLE_AUTH_PRINCIPAL_URL = CATTLE_TEST_URL + "/v3/principals?action=search"
 
+CATTLE_AUTH_ENABLE_URL = CATTLE_AUTH_PROVIDER_URL + "?action=testAndApply"
+
+CATTLE_AUTH_DISABLE_URL = CATTLE_AUTH_PROVIDER_URL + "?action=disable"
 
 setup = {"cluster1": None,
          "project1": None,
@@ -67,6 +80,32 @@ def test_access_control_restricted_add_users_and_groups_to_project():
     access_mode = "restricted"
     validate_add_users_and_groups_to_cluster_or_project(
         access_mode, add_users_to_cluster=False)
+
+
+def test_disable_and_enable_auth_set_access_control_required():
+    access_mode = "required"
+    validate_access_control_disable_and_enable_auth(access_mode)
+
+
+def test_disable_and_enable_auth_set_access_control_restricted():
+    access_mode = "restricted"
+    validate_access_control_disable_and_enable_auth(access_mode)
+
+
+# By default nestedgroup is disabled for ad and openldap, enabled for freeipa
+def test_disable_and_enable_nestedgroups_set_access_control_required():
+    access_mode = "required"
+    validate_access_control_disable_and_enable_nestedgroups(access_mode)
+
+
+def test_disable_and_enable_nestedgroup_for_openldap_set_access_control_restricted():
+    access_mode = "restricted"
+    validate_access_control_disable_and_enable_nestedgroups(access_mode)
+
+
+def test_ad_service_account_login():
+    if AUTH_PROVIDER == "activeDirectory":
+        login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
 
 
 def validate_access_control_set_access_mode(access_mode):
@@ -126,7 +165,6 @@ def validate_access_control_set_access_mode(access_mode):
             login(user, PASSWORD)
 
     # Remove users and groups from allowed list to access rancher-server
-
     allowed_principal_ids = []
 
     allowed_principal_ids.append(principal_lookup(admin_user, token))
@@ -171,8 +209,6 @@ def validate_add_users_and_groups_to_cluster_or_project(
     # Add users and groups in allowed list to access rancher-server
     add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
 
-    groups_to_check = []
-    users_to_check = []
     if add_users_to_cluster:
         groups_to_check = auth_setup_data["groups_added_to_cluster"]
         users_to_check = auth_setup_data["users_added_to_cluster"]
@@ -219,6 +255,102 @@ def validate_add_users_and_groups_to_cluster_or_project(
         login(user, PASSWORD, expected_status)
 
 
+def validate_access_control_disable_and_enable_auth(access_mode):
+    delete_cluster_users()
+    auth_setup_data = setup["auth_setup_data"]
+
+    # Login as admin user to disable auth, should be success, then enable it.
+    admin_user = auth_setup_data["admin_user"]
+    admin_token = login(admin_user, PASSWORD)
+    if AUTH_PROVIDER == "activeDirectory":
+        disable_ad(admin_user, admin_token)
+        enable_ad(admin_user, admin_token)
+    if AUTH_PROVIDER == "openLdap":
+        disable_openldap(admin_user, admin_token)
+        enable_openldap(admin_user, admin_token)
+    if AUTH_PROVIDER == "freeIpa":
+        disable_freeipa(admin_user, admin_token)
+        enable_freeipa(admin_user, admin_token)
+
+    # Login as users within allowed principal id list, which cannot perform disable action.
+    allowed_principal_ids = []
+    for user in auth_setup_data["allowed_users"]:
+        allowed_principal_ids.append(principal_lookup(user, admin_token))
+    allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+
+    # Add users in allowed list to access rancher-server
+    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+
+    for user in auth_setup_data["allowed_users"]:
+        token = login(user, PASSWORD)
+        if AUTH_PROVIDER == "activeDirectory":
+            disable_ad(user, token, expected_status=setup["permission_denied_code"])
+            enable_ad(user, token, expected_status=setup["permission_denied_code"])
+        if AUTH_PROVIDER == "openLdap":
+            disable_openldap(user, token, expected_status=setup["permission_denied_code"])
+            enable_openldap(user, token, expected_status=setup["permission_denied_code"])
+        if AUTH_PROVIDER == "freeIpa":
+            disable_freeipa(user, token, expected_status=setup["permission_denied_code"])
+            enable_freeipa(user, token, expected_status=setup["permission_denied_code"])
+
+
+def validate_access_control_disable_and_enable_nestedgroups(access_mode):
+    delete_project_users()
+    delete_cluster_users()
+
+    auth_setup_data = setup["auth_setup_data"]
+    admin_user = auth_setup_data["admin_user"]
+    token = login(admin_user, PASSWORD)
+    if AUTH_PROVIDER == "activeDirectory":
+        enable_ad(admin_user, token)
+    if AUTH_PROVIDER == "openLdap":
+        enable_openldap(admin_user, token)
+    if AUTH_PROVIDER == "freeIpa":
+        enable_freeipa(admin_user, token)
+
+    allowed_principal_ids = []
+    for group in auth_setup_data["allowed_nestedgroups"]:
+        allowed_principal_ids.append(principal_lookup(group, token))
+
+    allowed_principal_ids.append(principal_lookup(admin_user, token))
+
+    # Add users in allowed list to access rancher-server
+    add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
+
+    for group in auth_setup_data["allowed_nestedgroups"]:
+        for user in auth_setup_data[group]:
+            login(user, PASSWORD)
+
+    if AUTH_PROVIDER == "freeIpa":
+        for user in auth_setup_data["users_under_nestedgroups"]:
+            login(user, PASSWORD)
+
+    if AUTH_PROVIDER == "activeDirectory" or AUTH_PROVIDER == "openLdap":
+        for user in auth_setup_data["users_under_nestedgroups"]:
+            login(user, PASSWORD, expected_status=setup["permission_denied_code"])
+
+        # Enable nestedgroup feature, so users under nestedgroups can login successfully
+        if AUTH_PROVIDER == "activeDirectory":
+            enable_ad_nestedgroups(admin_user, token)
+        if AUTH_PROVIDER == "openLdap":
+            enable_openldap_nestedgroup(admin_user, token)
+
+        allowed_principal_ids = []
+        for group in auth_setup_data["allowed_nestedgroups"]:
+           allowed_principal_ids.append(principal_lookup(group, token))
+        allowed_principal_ids.append(principal_lookup(admin_user, token))
+
+        # Add users in allowed list to access rancher-server
+        add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
+
+        for group in auth_setup_data["allowed_nestedgroups"]:
+            for user in auth_setup_data[group]:
+                login(user, PASSWORD)
+
+        for user in auth_setup_data["users_under_nestedgroups"]:
+            login(user, PASSWORD)
+
+
 def login(username, password, expected_status=201):
     token = ""
     r = requests.post(CATTLE_AUTH_URL, json={
@@ -231,6 +363,225 @@ def login(username, password, expected_status=201):
     if expected_status == 201:
         token = r.json()['token']
     return token
+
+
+def enable_openldap(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "ldapConfig": {
+        "accessMode": "unrestricted",
+        "connectionTimeout": CONNECTION_TIMEOUT,
+        "certificate": CA_CERTIFICATE,
+        "groupDNAttribute": "entryDN",
+        "groupMemberMappingAttribute": "member",
+        "groupMemberUserAttribute": "entryDN",
+        "groupNameAttribute": "cn",
+        "groupObjectClass": "groupOfNames",
+        "groupSearchAttribute": "cn",
+        "nestedGroupMembershipEnabled": False,
+        "enabled": True,
+        "port": PORT,
+        "servers": [
+          HOSTNAME_OR_IP_ADDRESS
+        ],
+        "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
+        "tls": TLS,
+        "userDisabledBitMask": 0,
+        "userLoginAttribute": "uid",
+        "userMemberAttribute": "memberOf",
+        "userNameAttribute": "cn",
+        "userObjectClass": "inetOrgPerson",
+        "userSearchAttribute": "uid|sn|givenName",
+        "userSearchBase": USER_SEARCH_BASE,
+        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+      },
+      "username": username,
+      "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Enable openLdap request for " + username + " " + str(expected_status)
+
+
+def disable_openldap(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
+        'username': username,
+        'password': PASSWORD
+    }, verify=False,headers=headers)
+    assert r.status_code == expected_status
+    print "Disable openLdap request for " + username + " " + str(expected_status)
+
+
+def enable_openldap_nestedgroup(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "ldapConfig": {
+        "accessMode": "unrestricted",
+        "connectionTimeout": CONNECTION_TIMEOUT,
+        "certificate": CA_CERTIFICATE,
+        "groupDNAttribute": "entryDN",
+        "groupMemberMappingAttribute": "member",
+        "groupMemberUserAttribute": "entryDN",
+        "groupNameAttribute": "cn",
+        "groupObjectClass": "groupOfNames",
+        "groupSearchAttribute": "cn",
+        "nestedGroupMembershipEnabled": True,
+        "enabled": True,
+        "port": PORT,
+        "servers": [
+          HOSTNAME_OR_IP_ADDRESS
+        ],
+        "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
+        "tls": TLS,
+        "userDisabledBitMask": 0,
+        "userLoginAttribute": "uid",
+        "userMemberAttribute": "memberOf",
+        "userNameAttribute": "cn",
+        "userObjectClass": "inetOrgPerson",
+        "userSearchAttribute": "uid|sn|givenName",
+        "userSearchBase": USER_SEARCH_BASE,
+        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+      },
+      "username": username,
+      "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Enable openLdap nestedgroup request for " + username + " " + str(expected_status)
+
+
+def enable_ad(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "activeDirectoryConfig": {
+          "accessMode": "unrestricted",
+          "certificate":  CA_CERTIFICATE,
+          "connectionTimeout": CONNECTION_TIMEOUT,
+          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
+          "groupDNAttribute": "distinguishedName",
+          "groupMemberMappingAttribute": "member",
+          "groupMemberUserAttribute": "distinguishedName",
+          "groupNameAttribute": "name",
+          "groupObjectClass": "group",
+          "groupSearchAttribute": "sAMAccountName",
+          "nestedGroupMembershipEnabled": False,
+          "port": PORT,
+          "servers": [
+              HOSTNAME_OR_IP_ADDRESS
+          ],
+          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
+          "tls": True,
+          "userDisabledBitMask": 2,
+          "userEnabledAttribute": "userAccountControl",
+          "userLoginAttribute": "sAMAccountName",
+          "userNameAttribute": "name",
+          "userObjectClass": "person",
+          "userSearchAttribute": "sAMAccountName|sn|givenName",
+          "userSearchBase": USER_SEARCH_BASE,
+          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+      },
+      "enabled": True,
+      "username": username,
+      "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Enable ActiveDirectory request for " + username + " " + str(expected_status)
+
+
+def disable_ad(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
+      "enabled": False,
+      "username": username,
+      "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Disable ActiveDirectory request for " + username + " " + str(expected_status)
+
+
+def enable_ad_nestedgroups(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "activeDirectoryConfig": {
+          "accessMode": "unrestricted",
+          "certificate":  CA_CERTIFICATE,
+          "connectionTimeout": CONNECTION_TIMEOUT,
+          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
+          "groupDNAttribute": "distinguishedName",
+          "groupMemberMappingAttribute": "member",
+          "groupMemberUserAttribute": "distinguishedName",
+          "groupNameAttribute": "name",
+          "groupObjectClass": "group",
+          "groupSearchAttribute": "sAMAccountName",
+          "nestedGroupMembershipEnabled": True,
+          "port": PORT,
+          "servers": [
+              HOSTNAME_OR_IP_ADDRESS
+          ],
+          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
+          "tls": True,
+          "userDisabledBitMask": 2,
+          "userEnabledAttribute": "userAccountControl",
+          "userLoginAttribute": "sAMAccountName",
+          "userNameAttribute": "name",
+          "userObjectClass": "person",
+          "userSearchAttribute": "sAMAccountName|sn|givenName",
+          "userSearchBase": USER_SEARCH_BASE,
+          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+      },
+      "enabled": True,
+      "username": username,
+      "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Enable ActiveDirectory nestedgroup request for " + username + " " + str(expected_status)
+
+
+def enable_freeipa(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+        "ldapConfig": {
+            "accessMode": "unrestricted",
+            "connectionTimeout": CONNECTION_TIMEOUT,
+            "groupDNAttribute": "entrydn",
+            "groupMemberMappingAttribute": "member",
+            "groupMemberUserAttribute": "entrydn",
+            "groupNameAttribute": "cn",
+            "groupObjectClass": "groupofnames",
+            "groupSearchAttribute": "cn",
+            "groupSearchBase": GROUP_SEARCH_BASE,
+            "enabled": True,
+            "nestedGroupMembershipEnabled": False,
+            "port": PORT,
+            "servers": [
+                HOSTNAME_OR_IP_ADDRESS
+            ],
+            "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
+            "tls": TLS,
+            "userDisabledBitMask": 0,
+            "userLoginAttribute": "uid",
+            "userMemberAttribute": "memberOf",
+            "userNameAttribute": "givenName",
+            "userObjectClass": "inetorgperson",
+            "userSearchAttribute": "uid|sn|givenName",
+            "userSearchBase": USER_SEARCH_BASE,
+            "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+        },
+        "username": username,
+        "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Enable freeIpa request for " + username + " " + str(expected_status)
+
+
+def disable_freeipa(username, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
+        "enabled": False,
+        "username": username,
+        "password": PASSWORD
+    }, verify=False, headers=headers)
+    assert r.status_code == expected_status
+    print "Disable freeIpa request for " + username + " " + str(expected_status)
 
 
 def principal_lookup(name, token):
@@ -290,7 +641,7 @@ def delete_existing_users_in_project(client, project):
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
-    if AUTH_PROVIDER not in ("activeDirectory", "openLDAP"):
+    if AUTH_PROVIDER not in ("activeDirectory", "openLdap", "freeIpa"):
         assert False, "Auth Provider set is not supported"
     setup["auth_setup_data"] = load_setup_data()
     client = get_admin_client()
@@ -308,10 +659,6 @@ def create_project_client(request):
     setup["cluster2"] = cluster2
     setup["project2"] = p2
     setup["ns2"] = ns2
-    if AUTH_PROVIDER == "activeDirectory":
-        setup["permission_denied_code"] = AD_PERMISSION_DENIED_CODE
-    if AUTH_PROVIDER == "openLDAP":
-        setup["permission_denied_code"] = LDAP_PERMISSION_DENIED_CODE
 
     def fin():
         client = get_admin_client()
@@ -324,6 +671,11 @@ def create_project_client(request):
 def delete_cluster_users():
     delete_existing_users_in_cluster(get_admin_client(), setup["cluster1"])
     delete_existing_users_in_cluster(get_admin_client(), setup["cluster2"])
+
+
+def delete_project_users():
+    delete_existing_users_in_project(get_admin_client(), setup["project1"])
+    delete_existing_users_in_project(get_admin_client(), setup["project2"])
 
 
 def load_setup_data():
