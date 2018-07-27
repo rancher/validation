@@ -97,10 +97,15 @@ def test_disable_and_enable_nestedgroups_set_access_control_required():
     access_mode = "required"
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
 
-#
+
 def test_disable_and_enable_nestedgroup_for_openldap_set_access_control_restricted():
     access_mode = "restricted"
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
+
+
+def test_ad_service_account_login():
+    if AUTH_PROVIDER == "activeDirectory":
+        login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
 
 
 def validate_access_control_set_access_mode(access_mode):
