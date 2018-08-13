@@ -203,7 +203,7 @@ def validate_workload_with_secret(p_client, workload,
         if workloadwithsecretasVolume:
             key_file_in_pod = mountpath + "/" + key
             print key_file_in_pod
-            command = 'cat ' + key_file_in_pod + ''
+            command = "cat " + key_file_in_pod + ''
             print " Command to display secret value from container is: "
             print command
             result = kubectl_pod_exec(pod_list[0], command)
@@ -263,11 +263,11 @@ def create_and_validate_workload_with_secret_as_volume(p_client, secret, ns,
             "image": "sangeetha/testclient",
             "volumeMounts": volumeMounts}]
 
-    secretId = secret['name']
+    secretName = secret['name']
 
     volumes = [{"type": "volume", "name": "vol1",
                 "secret": {"type": "secretVolumeSource", "defaultMode": 256,
-                           "secretId": secretId,
+                           "secretName": secretName,
                            "optional": False, "items": "NULL"}}]
 
     workload = p_client.create_workload(name=name,
@@ -285,12 +285,12 @@ def create_and_validate_workload_with_secret_as_env_variable(p_client, secret,
     name = random_test_name("test")
 
     # Create Workload with secret as env variable
-    secretId = secret['name']
+    secretName = secret['name']
 
     environmentdata = [{
         "source": "secret",
         "sourceKey": None,
-        "sourceName": secretId
+        "sourceName": secretName
     }]
     con = [{"name": "test",
             "image": "sangeetha/testclient",
