@@ -52,5 +52,8 @@
   ],
   "testautogroupnested1": [
     "testauto1"
+  ],
+    "specialcharacter_users": [
+    "testauto(san)&abc"
   ]
 }

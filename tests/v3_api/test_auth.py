@@ -6,6 +6,7 @@ import json
 
 AUTH_PROVIDER = os.environ.get('RANCHER_AUTH_PROVIDER', "")
 
+# All tests require Auth being setup already, and 2 clusters to be available in the setup.
 # Config Fields
 HOSTNAME_OR_IP_ADDRESS = os.environ.get("HOSTNAME_OR_IP_ADDRESS")
 PORT = os.environ.get("PORT")
@@ -113,6 +114,32 @@ def test_ad_service_account_login():
         disable_ad(admin_user, admin_token)
         enable_ad(admin_user, admin_token)
         login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
+
+
+def special_character_users_login(access_mode):
+    delete_project_users()
+    delete_cluster_users()
+    auth_setup_data = setup["auth_setup_data"]
+    admin_user = auth_setup_data["admin_user"]
+    admin_token = login(admin_user, PASSWORD)
+    allowed_principal_ids = []
+    if AUTH_PROVIDER == "activeDirectory":
+        disable_ad(admin_user, admin_token)
+        enable_ad(admin_user, admin_token)
+    if AUTH_PROVIDER == "openLdap":
+        disable_openldap(admin_user, admin_token)
+        enable_openldap(admin_user, admin_token)
+    if AUTH_PROVIDER == "freeIpa":
+        disable_freeipa(admin_user, admin_token)
+        enable_freeipa(admin_user, admin_token)
+
+    for user in auth_setup_data["specialcharacter_users"]:
+        allowed_principal_ids.append(principal_lookup(user, admin_token))
+    allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+
+    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+    for user in auth_setup_data["specialcharacter_users"]:
+        login(user, PASSWORD)
 
 
 def validate_access_control_set_access_mode(access_mode):
