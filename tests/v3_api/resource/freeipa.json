@@ -52,5 +52,10 @@
   ],
   "testautogroupnested1": [
     "testauto1"
+  ],
+  "specialcharacter_users": [
+    "testauto20$",
+    "testauto21",
+    "testauto22"
   ]
 }
