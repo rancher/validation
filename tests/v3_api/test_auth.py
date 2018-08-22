@@ -116,7 +116,7 @@ def test_ad_service_account_login():
         login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
 
 
-def special_character_users_login(access_mode):
+def test_special_character_users_login(access_mode):
     delete_project_users()
     delete_cluster_users()
     auth_setup_data = setup["auth_setup_data"]
