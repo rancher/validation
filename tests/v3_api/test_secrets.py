@@ -253,8 +253,10 @@ def delete_secret(client, secret, ns, keyvaluepair):
 
 
 def create_and_validate_workload_with_secret_as_volume(p_client, secret, ns,
-                                                       keyvaluepair):
-    name = random_test_name("test")
+                                                       keyvaluepair,
+                                                       name=None):
+    if name is None:
+        name = random_test_name("test")
     # Create Workload with secret as volume
     mountpath = "/test"
     volumeMounts = [{"readOnly": False, "type": "volumeMount",
@@ -281,8 +283,10 @@ def create_and_validate_workload_with_secret_as_volume(p_client, secret, ns,
 
 
 def create_and_validate_workload_with_secret_as_env_variable(p_client, secret,
-                                                             ns, keyvaluepair):
-    name = random_test_name("test")
+                                                             ns, keyvaluepair,
+                                                             name=None):
+    if name is None:
+        name = random_test_name("test")
 
     # Create Workload with secret as env variable
     secretName = secret['name']
@@ -305,11 +309,16 @@ def create_and_validate_workload_with_secret_as_env_variable(p_client, secret,
     return workload
 
 
-def create_secret(keyvaluepair, singlenamespace=False):
+def create_secret(keyvaluepair, singlenamespace=False,
+                  p_client=None, ns=None, name=None):
 
-    p_client = namespace["p_client"]
-    name = random_test_name("default")
-    ns = namespace["ns"]
+    if p_client is None:
+        p_client = namespace["p_client"]
+
+    if name is None:
+        name = random_test_name("default")
+    if ns is None:
+        ns = namespace["ns"]
 
     if not singlenamespace:
         secret = p_client.create_secret(name=name, namespaceId='NULL',

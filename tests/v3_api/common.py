@@ -107,16 +107,18 @@ def random_name():
     return "test" + "-" + str(random_int(10000, 99999))
 
 
-def create_project_and_ns(token, cluster):
+def create_project_and_ns(token, cluster, project_name=None, ns_name=None):
     client = get_client_for_token(token)
-    p = create_project(client, cluster)
+    p = create_project(client, cluster, project_name)
     c_client = get_cluster_client_for_token(cluster, token)
-    ns = create_ns(c_client, cluster, p)
+    ns = create_ns(c_client, cluster, p, ns_name)
     return p, ns
 
 
-def create_project(client, cluster):
-    p = client.create_project(name=random_name(),
+def create_project(client, cluster, project_name=None):
+    if project_name is None:
+        project_name = random_name()
+    p = client.create_project(name=project_name,
                               clusterId=cluster.id)
     p = client.wait_success(p)
     assert p.state == 'active'
@@ -138,8 +140,10 @@ def set_pspt_for_project(project, client, pspt):
     return project
 
 
-def create_ns(client, cluster, project):
-    ns = client.create_namespace(name=random_name(),
+def create_ns(client, cluster, project, ns_name=None):
+    if ns_name is None:
+        ns_name = random_name()
+    ns = client.create_namespace(name=ns_name,
                                  clusterId=cluster.id,
                                  projectId=project.id)
     # ns = wait_state(client, ns, "state", "active")
