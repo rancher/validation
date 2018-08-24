@@ -1,0 +1,48 @@
+jobs = [:]
+
+node {
+    wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
+        stage('Checkout') {
+            deleteDir()
+            checkout scm
+        }
+
+        try {
+            stage('Configure and build') {
+                sh "./tests/v3_api/scripts/configure.sh"
+                sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME} && chmod 400 .ssh/*"
+                sh "./tests/v3_api/scripts/build.sh"
+            }
+
+            stage('Deploy Rancher server') {
+                sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests /bin/bash -c \'pytest -v -s --junit-xml=setup.xml -k test_deploy_rancher_server tests/v3_api/\'"
+                sh "docker cp ${JOB_NAME}${BUILD_NUMBER}:/src/rancher-validation/tests/v3_api/rancher_env.config ."
+                load "rancher_env.config"
+            }
+
+            stage('Run provisioning tests') {
+                params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}") ]
+
+                jobs["custom"] = { build job: 'v3_test_custom_cluster', parameters: params}
+                jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }
+                jobs["ec2"] = { build job: 'v3_test_ec2_cluster', parameters: params }
+                jobs["az"] = { build job: 'v3_test_az_cluster', parameters: params }
+
+                parallel jobs
+            }
+
+            // collect results
+
+            stage('Test Report') {
+                sh "docker cp ${JOB_NAME}${env.BUILD_NUMBER}:/src/rancher-validation/setup.xml ."
+                step([$class: 'JUnitResultArchiver', testResults: '**/setup.xml'])
+                sh "docker rm -v ${JOB_NAME}${env.BUILD_NUMBER}"
+            }
+        } catch(err) {
+            sh "docker stop ${JOB_NAME}${env.BUILD_NUMBER}"
+            sh "docker rm -v ${JOB_NAME}${env.BUILD_NUMBER}"
+        } finally {
+            // aggregate results by copying xml files and running junit on them
+        }
+    }
+}
