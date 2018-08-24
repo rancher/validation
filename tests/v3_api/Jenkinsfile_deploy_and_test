@@ -16,8 +16,10 @@ node {
   def rancherConfig = "rancher_env.config"
 
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
-    checkout scm
-    //git(branch: "jenkins-fix", url: "https://github.com/bmdepesa/validation")
+    stage('Checkout') {
+      deleteDir()
+      checkout scm
+    }
 
     stage('Configure and Build') {
       sh "./tests/v3_api/scripts/configure.sh"
