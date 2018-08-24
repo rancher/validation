@@ -176,6 +176,29 @@ class AmazonWebServices(CloudProviderBase):
                 node.ready_node()
         return nodes
 
+    def get_nodes(self, filters):
+        try:
+            response = self._client.describe_instances(Filters=filters)
+            nodes = response.get('Reservations', [])
+            if len(nodes) == 0:
+                return None  # no node found
+
+            ret_nodes = []
+            for aws_node_i in nodes:
+                aws_node = aws_node_i['Instances'][0]
+                node = Node(
+                    provider_node_id=aws_node.get('InstanceId'),
+                    # node_name= aws_node tags?,
+                    host_name=aws_node.get('PublicDnsName'),
+                    public_ip_address=aws_node.get('PublicIpAddress'),
+                    private_ip_address=aws_node.get('PrivateIpAddress'),
+                    state=aws_node['State']['Name'])
+                ret_nodes.append(node)
+            return ret_nodes
+        except Boto3Error as e:
+            msg = "Failed while getting instances: {}".format(str(e))
+            raise RuntimeError(msg)
+
     def get_node(self, provider_id):
         node_filter = [{
             'Name': 'instance-id', 'Values': [provider_id]}]
@@ -245,6 +268,12 @@ class AmazonWebServices(CloudProviderBase):
         if wait_for_deleted:
             node = self.wait_for_node_state(node, 'terminated')
         return node
+
+    def delete_nodes(self, nodes):
+        instances = [node.provider_node_id for node in nodes]
+        self._client.terminate_instances(
+            InstanceIds=instances)
+        return
 
     def wait_for_node_state(self, node, state='running'):
         # 'running', 'stopped', 'terminated'

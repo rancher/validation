@@ -7,6 +7,7 @@ HOST_COUNT = int(os.environ.get('RANCHER_HOST_COUNT', 1))
 HOST_NAME = os.environ.get('RANCHER_HOST_NAME', "testsa")
 RANCHER_SERVER_VERSION = os.environ.get('RANCHER_SERVER_VERSION', "master")
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', "None")
+AWS_SSH_KEY_NAME = os.environ.get('AWS_SSH_KEY_NAME', "jenkins-rke-validation")
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "ignoreDockerVersion": False,
               "network": {"type": "networkConfig", "plugin": "canal"},
@@ -62,6 +63,14 @@ def test_deploy_rancher_server():
     file = open(env_file, "w")
     file.write(env_details)
     file.close()
+
+
+def test_delete_automation_instances():
+    filters = [
+            {'Name': 'tag:Name', 'Values': ['testsa*', 'testcustom*']},
+            {'Name': 'key-name', 'Values': [AWS_SSH_KEY_NAME]}]
+    aws_nodes = AmazonWebServices().get_nodes(filters)
+    AmazonWebServices().delete_nodes(aws_nodes)
 
 
 def get_admin_token(RANCHER_SERVER_URL):
