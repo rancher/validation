@@ -8,16 +8,16 @@ AUTH_PROVIDER = os.environ.get('RANCHER_AUTH_PROVIDER', "")
 
 # All tests require Auth being setup already, and 2 clusters to be available in the setup.
 # Config Fields
-HOSTNAME_OR_IP_ADDRESS = os.environ.get("HOSTNAME_OR_IP_ADDRESS")
-PORT = os.environ.get("PORT")
-TLS = os.environ.get("TLS")
-CA_CERTIFICATE = os.environ.get("CA_CERTIFICATE")
-CONNECTION_TIMEOUT = os.environ.get("CONNECTION_TIMEOUT")
-SERVICE_ACCOUNT_NAME = os.environ.get("SERVICE_ACCOUNT_NAME")
-SERVICE_ACCOUNT_PASSWORD = os.environ.get("SERVICE_ACCOUNT_PASSWORD")
-DEFAULT_LOGIN_DOMAIN = os.environ.get("DEFAULT_LOGIN_DOMAIN")
-USER_SEARCH_BASE = os.environ.get("USER_SEARCH_BASE")
-GROUP_SEARCH_BASE = os.environ.get("GROUP_SEARCH_BASE")
+HOSTNAME_OR_IP_ADDRESS = os.environ.get("RANCHER_HOSTNAME_OR_IP_ADDRESS")
+PORT = os.environ.get("RANCHER_PORT")
+TLS = os.environ.get("RANCHER_TLS")
+CA_CERTIFICATE = os.environ.get("RANCHER_CA_CERTIFICATE")
+CONNECTION_TIMEOUT = os.environ.get("RANCHER_CONNECTION_TIMEOUT")
+SERVICE_ACCOUNT_NAME = os.environ.get("RANCHER_SERVICE_ACCOUNT_NAME")
+SERVICE_ACCOUNT_PASSWORD = os.environ.get("RANCHER_SERVICE_ACCOUNT_PASSWORD")
+DEFAULT_LOGIN_DOMAIN = os.environ.get("RANCHER_DEFAULT_LOGIN_DOMAIN")
+USER_SEARCH_BASE = os.environ.get("RANCHER_USER_SEARCH_BASE")
+GROUP_SEARCH_BASE = os.environ.get("RANCHER_GROUP_SEARCH_BASE")
 PASSWORD = os.environ.get('RANCHER_USER_PASSWORD', "")
 
 
@@ -401,8 +401,7 @@ def login(username, password, expected_status=201):
 
 def enable_openldap(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "ldapConfig": {
+    ldapConfig = {
         "accessMode": "unrestricted",
         "connectionTimeout": CONNECTION_TIMEOUT,
         "certificate": CA_CERTIFICATE,
@@ -428,7 +427,13 @@ def enable_openldap(username, token, expected_status=200):
         "userSearchAttribute": "uid|sn|givenName",
         "userSearchBase": USER_SEARCH_BASE,
         "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-      },
+    }
+
+    ca_cert = ldapConfig["certificate"]
+    ldapConfig["certificate"] = ca_cert.replace('\\n', '\n')
+
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "ldapConfig": ldapConfig,
       "username": username,
       "password": PASSWORD
     }, verify=False, headers=headers)
@@ -448,8 +453,7 @@ def disable_openldap(username, token, expected_status=200):
 
 def enable_openldap_nestedgroup(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "ldapConfig": {
+    ldapConfig = {
         "accessMode": "unrestricted",
         "connectionTimeout": CONNECTION_TIMEOUT,
         "certificate": CA_CERTIFICATE,
@@ -475,7 +479,13 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
         "userSearchAttribute": "uid|sn|givenName",
         "userSearchBase": USER_SEARCH_BASE,
         "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-      },
+    }
+
+    ca_cert = ldapConfig["certificate"]
+    ldapConfig["certificate"] = ca_cert.replace('\\n', '\n')
+
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "ldapConfig": ldapConfig,
       "username": username,
       "password": PASSWORD
     }, verify=False, headers=headers)
@@ -485,8 +495,7 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
 
 def enable_ad(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "activeDirectoryConfig": {
+    activeDirectoryConfig = {
           "accessMode": "unrestricted",
           "certificate":  CA_CERTIFICATE,
           "connectionTimeout": CONNECTION_TIMEOUT,
@@ -512,7 +521,13 @@ def enable_ad(username, token, expected_status=200):
           "userSearchAttribute": "sAMAccountName|sn|givenName",
           "userSearchBase": USER_SEARCH_BASE,
           "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-      },
+    }
+
+    ca_cert = activeDirectoryConfig["certificate"]
+    activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
+
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "activeDirectoryConfig": activeDirectoryConfig,
       "enabled": True,
       "username": username,
       "password": PASSWORD
@@ -534,8 +549,7 @@ def disable_ad(username, token, expected_status=200):
 
 def enable_ad_nestedgroups(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "activeDirectoryConfig": {
+    activeDirectoryConfig = {
           "accessMode": "unrestricted",
           "certificate":  CA_CERTIFICATE,
           "connectionTimeout": CONNECTION_TIMEOUT,
@@ -561,7 +575,13 @@ def enable_ad_nestedgroups(username, token, expected_status=200):
           "userSearchAttribute": "sAMAccountName|sn|givenName",
           "userSearchBase": USER_SEARCH_BASE,
           "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-      },
+    }
+
+    ca_cert = activeDirectoryConfig["certificate"]
+    activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
+
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+      "activeDirectoryConfig": activeDirectoryConfig,
       "enabled": True,
       "username": username,
       "password": PASSWORD
