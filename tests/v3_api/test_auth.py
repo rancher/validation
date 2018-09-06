@@ -23,6 +23,9 @@ DEFAULT_LOGIN_DOMAIN = os.environ.get("RANCHER_DEFAULT_LOGIN_DOMAIN")
 USER_SEARCH_BASE = os.environ.get("RANCHER_USER_SEARCH_BASE")
 GROUP_SEARCH_BASE = os.environ.get("RANCHER_GROUP_SEARCH_BASE")
 PASSWORD = os.environ.get('RANCHER_USER_PASSWORD', "")
+AD_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_AD_SPECIAL_CHAR_PASSWORD")
+OPENLDAP_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_OPENLDAP_SPECIAL_CHAR_PASSWORD")
+FREEIPA_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_FREEIPA_SPECIAL_CHAR_PASSWORD")
 
 
 CATTLE_AUTH_URL = \
@@ -147,13 +150,70 @@ def special_character_users_login(access_mode):
         disable_freeipa(admin_user, admin_token)
         enable_freeipa(admin_user, admin_token)
 
-    for user in auth_setup_data["specialcharacter_users"]:
-        allowed_principal_ids.append(principal_lookup(user, admin_token))
-    allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+    if AUTH_PROVIDER == "activeDirectory":
+        for user in auth_setup_data["specialchar_in_username"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for user in auth_setup_data["specialchar_in_password"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for user in auth_setup_data["specialchar_in_userdn"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            allowed_principal_ids.append(principal_lookup(group, admin_token))
 
-    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
-    for user in auth_setup_data["specialcharacter_users"]:
-        login(user, PASSWORD)
+        allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+
+        for user in auth_setup_data["specialchar_in_username"]:
+            login(user, PASSWORD)
+        for user in auth_setup_data["specialchar_in_password"]:
+            login(user, AD_SPECIAL_CHAR_PASSWORD)
+        for user in auth_setup_data["specialchar_in_userdn"]:
+            login(user, PASSWORD)
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            for user in auth_setup_data[group]:
+                login(user, PASSWORD)
+
+    if AUTH_PROVIDER == "openLdap":
+        for user in auth_setup_data["specialchar_in_user_cn_sn"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for user in auth_setup_data["specialchar_in_uid"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for user in auth_setup_data["specialchar_in_password"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            allowed_principal_ids.append(principal_lookup(group, admin_token))
+
+        allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+
+        for user in auth_setup_data["specialchar_in_user_cn_sn"]:
+            login(user,PASSWORD)
+        for user in auth_setup_data["specialchar_in_uid"]:
+            login(user, PASSWORD)
+        for user in auth_setup_data["specialchar_in_password"]:
+            login(user, OPENLDAP_SPECIAL_CHAR_PASSWORD)
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            for user in auth_setup_data[group]:
+                login(user, PASSWORD)
+
+    if AUTH_PROVIDER == "freeIpa":
+        for user in auth_setup_data["specialchar_in_users"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for user in auth_setup_data["specialchar_in_password"]:
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            allowed_principal_ids.append(principal_lookup(group, admin_token))
+
+        allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
+        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+
+        for user in auth_setup_data["specialchar_in_users"]:
+            login(user,PASSWORD)
+        for user in auth_setup_data["specialchar_in_password"]:
+            login(user, FREEIPA_SPECIAL_CHAR_PASSWORD)
+        for group in auth_setup_data["specialchar_in_groupname"]:
+            for user in auth_setup_data[group]:
+                login(user, PASSWORD)
 
 
 def validate_access_control_set_access_mode(access_mode):
