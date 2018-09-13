@@ -53,8 +53,19 @@
   "testautogroupnested1": [
     "testauto1"
   ],
-  "specialcharacter_users": [
-    "testautouser9",
-    "testauto(san)&abc"
+  "specialchar_in_user_cn_sn":[
+    "testuser9"
+  ],
+  "specialchar_in_uid":[
+    "test(san)&abc"
+  ],
+  "specialchar_in_password": [
+    "testuser4"
+  ],
+  "specialchar_in_groupname": [
+    "test(group&)abc(group)"
+  ],
+  "test(group&)abc(group)": [
+    "testuser9"
   ]
 }
