@@ -696,7 +696,7 @@ def node_template_do():
     node_template = client.create_node_template(
         digitaloceanConfig={"accessToken": DO_ACCESSKEY,
                             "region": "nyc3",
-                            "size": "1gb",
+                            "size": "s-2vcpu-2gb",
                             "image": "ubuntu-16-04-x64"},
         name=random_name(),
         driver="digitalocean",

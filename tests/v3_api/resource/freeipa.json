@@ -53,9 +53,18 @@
   "testautogroupnested1": [
     "testauto1"
   ],
-  "specialcharacter_users": [
+  "specialchar_in_users": [
     "testauto20$",
     "testauto21",
     "testauto22"
+  ],
+  "specialchar_in_password": [
+    "testuser23"
+  ],
+    "specialchar_in_groupname": [
+    "specialgroup1-_.$"
+  ],
+  "specialgroup1-_.$": [
+    "testauto25"
   ]
 }
