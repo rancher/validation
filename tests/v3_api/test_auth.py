@@ -56,62 +56,62 @@ auth_setup_fname = \
                  AUTH_PROVIDER.lower() + ".json")
 
 
-def test_access_control_required_set_access_mode_required():
+def test_auth_access_control_required_set_access_mode_required():
     access_mode = "required"
     validate_access_control_set_access_mode(access_mode)
 
 
-def test_access_control_restricted_set_access_mode_required():
+def test_auth_access_control_restricted_set_access_mode_required():
     access_mode = "restricted"
     validate_access_control_set_access_mode(access_mode)
 
 
-def test_access_control_required_add_users_and_groups_to_cluster():
+def test_auth_access_control_required_add_users_and_groups_to_cluster():
     access_mode = "required"
     validate_add_users_and_groups_to_cluster_or_project(
         access_mode, add_users_to_cluster=True)
 
 
-def test_access_control_restricted_add_users_and_groups_to_cluster():
+def test_auth_access_control_restricted_add_users_and_groups_to_cluster():
     access_mode = "restricted"
     validate_add_users_and_groups_to_cluster_or_project(
         access_mode, add_users_to_cluster=True)
 
 
-def test_access_control_required_add_users_and_groups_to_project():
+def test_auth_access_control_required_add_users_and_groups_to_project():
     access_mode = "required"
     validate_add_users_and_groups_to_cluster_or_project(
         access_mode, add_users_to_cluster=False)
 
 
-def test_access_control_restricted_add_users_and_groups_to_project():
+def test_auth_access_control_restricted_add_users_and_groups_to_project():
     access_mode = "restricted"
     validate_add_users_and_groups_to_cluster_or_project(
         access_mode, add_users_to_cluster=False)
 
 
-def test_disable_and_enable_auth_set_access_control_required():
+def test_auth_disable_and_enable_auth_set_access_control_required():
     access_mode = "required"
     validate_access_control_disable_and_enable_auth(access_mode)
 
 
-def test_disable_and_enable_auth_set_access_control_restricted():
+def test_auth_disable_and_enable_auth_set_access_control_restricted():
     access_mode = "restricted"
     validate_access_control_disable_and_enable_auth(access_mode)
 
 
 # By default nestedgroup is disabled for ad and openldap, enabled for freeipa
-def test_disable_and_enable_nestedgroups_set_access_control_required():
+def test_auth_disable_and_enable_nestedgroups_set_access_control_required():
     access_mode = "required"
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
 
 
-def test_disable_and_enable_nestedgroup_set_access_control_restricted():
+def test_auth_disable_and_enable_nestedgroup_set_access_control_restricted():
     access_mode = "restricted"
     validate_access_control_disable_and_enable_nestedgroups(access_mode)
 
 
-def test_ad_service_account_login():
+def test_auth_ad_service_account_login():
     delete_project_users()
     delete_cluster_users()
     auth_setup_data = setup["auth_setup_data"]
@@ -123,14 +123,55 @@ def test_ad_service_account_login():
         login(SERVICE_ACCOUNT_NAME, SERVICE_ACCOUNT_PASSWORD)
 
 
-def test_special_character_users_login_access_mode_required():
+def test_auth_special_character_users_login_access_mode_required():
     access_mode = "required"
     special_character_users_login(access_mode)
 
 
-def test_special_character_users_login_access_mode_restricted():
+def test_auth_special_character_users_login_access_mode_restricted():
     access_mode = "restricted"
     special_character_users_login(access_mode)
+
+
+'''
+Description:
+In this test, we are testing the customized user and group search filter functionalities.
+1) For customized user search filter:
+The filter looks like: 
+(&(objectClass=person)(|(sAMAccountName=test*)(sn=test*)(givenName=test*))[user customized filter])
+For example, after we add userSearchFilter = (memberOf=CN=testautogroup1,CN=Users,DC=testad,DC=rancher,DC=io)
+we will filter out only testuser40 and testuser41, otherwise, all users start with search keyword "testuser"
+will be listed out.
+
+2) For customized group search filter:
+The filter looks like: 
+(&(objectClass=group)(sAMAccountName=test)[group customized filter])
+For example, after we add groupSearchFilter = (cn=testautogroup2)
+we will filter out only testgroup2, otherwise, all groups has search keyword "testgroup" will be listed out.
+'''
+
+
+def test_auth_custom_user_and_group_filter_for_AD():
+    delete_project_users()
+    delete_cluster_users()
+    auth_setup_data = setup["auth_setup_data"]
+    admin_user = auth_setup_data["admin_user"]
+    admin_token = login(admin_user, PASSWORD)
+    if AUTH_PROVIDER == "activeDirectory":
+        disable_ad(admin_user, admin_token)
+
+        enable_ad(admin_user, admin_token, usersearchfilter=auth_setup_data["user_search_filter"])
+        search_ad_users(auth_setup_data["user_search_key"], ADMIN_TOKEN)
+
+        enable_ad(admin_user, admin_token, usersearchfilter=auth_setup_data["user_search_filter_fake"])
+        search_ad_users_fake(auth_setup_data["user_search_key"], ADMIN_TOKEN)
+
+        disable_ad(admin_user, admin_token)
+        enable_ad(admin_user, admin_token, groupsearchfilter=auth_setup_data["group_search_filter"])
+        search_ad_groups(auth_setup_data["group_search_key"], ADMIN_TOKEN)
+
+        enable_ad(admin_user, admin_token, groupsearchfilter=auth_setup_data["user_search_filter_fake"])
+        search_ad_groups_fake(auth_setup_data["user_search_key"], ADMIN_TOKEN)
 
 
 def special_character_users_login(access_mode):
@@ -217,19 +258,27 @@ def special_character_users_login(access_mode):
 
 
 def validate_access_control_set_access_mode(access_mode):
-    delete_cluster_users()
     auth_setup_data = setup["auth_setup_data"]
     admin_user = auth_setup_data["admin_user"]
-    token = login(admin_user, PASSWORD)
+
+    if AUTH_PROVIDER == "activeDirectory":
+        enable_ad(admin_user, ADMIN_TOKEN)
+    if AUTH_PROVIDER == "openLdap":
+        enable_openldap(admin_user, ADMIN_TOKEN)
+    if AUTH_PROVIDER == "freeIpa":
+        enable_freeipa(admin_user, ADMIN_TOKEN)
+
+    admin_token = login(admin_user, PASSWORD)
+
     allowed_principal_ids = []
     for user in auth_setup_data["allowed_users"]:
-        allowed_principal_ids.append(principal_lookup(user, token))
+        allowed_principal_ids.append(principal_lookup(user, admin_token))
     for group in auth_setup_data["allowed_groups"]:
-        allowed_principal_ids.append(principal_lookup(group, token))
-    allowed_principal_ids.append(principal_lookup(admin_user, token))
+        allowed_principal_ids.append(principal_lookup(group, admin_token))
+    allowed_principal_ids.append(principal_lookup(admin_user,admin_token))
 
     # Add users and groups in allowed list to access rancher-server
-    add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
+    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
 
     for user in auth_setup_data["allowed_users"]:
         login(user, PASSWORD)
@@ -250,13 +299,13 @@ def validate_access_control_set_access_mode(access_mode):
     # Add users and groups from dis allowed list to access rancher-server
 
     for user in auth_setup_data["dis_allowed_users"]:
-        allowed_principal_ids.append(principal_lookup(user, token))
+        allowed_principal_ids.append(principal_lookup(user, admin_token))
 
     for group in auth_setup_data["dis_allowed_groups"]:
         for user in auth_setup_data[group]:
-            allowed_principal_ids.append(principal_lookup(user, token))
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
 
-    add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
+    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
 
     for user in auth_setup_data["allowed_users"]:
         login(user, PASSWORD)
@@ -275,15 +324,15 @@ def validate_access_control_set_access_mode(access_mode):
     # Remove users and groups from allowed list to access rancher-server
     allowed_principal_ids = []
 
-    allowed_principal_ids.append(principal_lookup(admin_user, token))
+    allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
 
     for user in auth_setup_data["dis_allowed_users"]:
-        allowed_principal_ids.append(principal_lookup(user, token))
+        allowed_principal_ids.append(principal_lookup(user, admin_token))
     for group in auth_setup_data["dis_allowed_groups"]:
         for user in auth_setup_data[group]:
-            allowed_principal_ids.append(principal_lookup(user, token))
+            allowed_principal_ids.append(principal_lookup(user, admin_token))
 
-    add_users_to_siteAccess(token, access_mode, allowed_principal_ids)
+    add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
 
     for user in auth_setup_data["allowed_users"]:
         login(user, PASSWORD,
@@ -440,9 +489,9 @@ def validate_access_control_disable_and_enable_nestedgroups(access_mode):
 
         # Enable nestedgroup feature, so users under nestedgroups can login successfully
         if AUTH_PROVIDER == "activeDirectory":
-            enable_ad_nestedgroups(admin_user, token)
+            enable_ad(admin_user, token, isnestedgroupenabled=True)
         if AUTH_PROVIDER == "openLdap":
-            enable_openldap_nestedgroup(admin_user, token)
+            enable_openldap(admin_user, token, isnestedgroupenabled=True)
 
         allowed_principal_ids = []
         for group in auth_setup_data["allowed_nestedgroups"]:
@@ -482,7 +531,7 @@ def get_tls(certificate):
     return tls
 
 
-def enable_openldap(username, token, expected_status=200):
+def enable_openldap(username, token, expected_status=200, isnestedgroupenabled=False):
     headers = {'Authorization': 'Bearer ' + token}
     ldapConfig = {
         "accessMode": "unrestricted",
@@ -494,7 +543,7 @@ def enable_openldap(username, token, expected_status=200):
         "groupNameAttribute": "cn",
         "groupObjectClass": "groupOfNames",
         "groupSearchAttribute": "cn",
-        "nestedGroupMembershipEnabled": False,
+        "nestedGroupMembershipEnabled": isnestedgroupenabled,
         "enabled": True,
         "port": PORT,
         "servers": [
@@ -534,53 +583,14 @@ def disable_openldap(username, token, expected_status=200):
     print "Disable openLdap request for " + username + " " + str(expected_status)
 
 
-def enable_openldap_nestedgroup(username, token, expected_status=200):
-    headers = {'Authorization': 'Bearer ' + token}
-    ldapConfig = {
-        "accessMode": "unrestricted",
-        "connectionTimeout": CONNECTION_TIMEOUT,
-        "certificate": CA_CERTIFICATE,
-        "groupDNAttribute": "entryDN",
-        "groupMemberMappingAttribute": "member",
-        "groupMemberUserAttribute": "entryDN",
-        "groupNameAttribute": "cn",
-        "groupObjectClass": "groupOfNames",
-        "groupSearchAttribute": "cn",
-        "nestedGroupMembershipEnabled": True,
-        "enabled": True,
-        "port": PORT,
-        "servers": [
-          HOSTNAME_OR_IP_ADDRESS
-        ],
-        "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
-        "tls": get_tls(CA_CERTIFICATE),
-        "userDisabledBitMask": 0,
-        "userLoginAttribute": "uid",
-        "userMemberAttribute": "memberOf",
-        "userNameAttribute": "cn",
-        "userObjectClass": "inetOrgPerson",
-        "userSearchAttribute": "uid|sn|givenName",
-        "userSearchBase": USER_SEARCH_BASE,
-        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-    }
-
-    ca_cert = ldapConfig["certificate"]
-    ldapConfig["certificate"] = ca_cert.replace('\\n', '\n')
-
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "ldapConfig": ldapConfig,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
-    assert r.status_code == expected_status
-    print "Enable openLdap nestedgroup request for " + username + " " + str(expected_status)
-
-
-def enable_ad(username, token, expected_status=200):
+def enable_ad(username, token, expected_status=200, usersearchfilter="", groupsearchfilter="",
+              isnestedgroupenabled=False):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
           "accessMode": "unrestricted",
           "certificate": CA_CERTIFICATE,
+          "userSearchFilter": usersearchfilter,
+          "groupSearchFilter": groupsearchfilter,
           "connectionTimeout": CONNECTION_TIMEOUT,
           "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
           "groupDNAttribute": "distinguishedName",
@@ -589,7 +599,7 @@ def enable_ad(username, token, expected_status=200):
           "groupNameAttribute": "name",
           "groupObjectClass": "group",
           "groupSearchAttribute": "sAMAccountName",
-          "nestedGroupMembershipEnabled": False,
+          "nestedGroupMembershipEnabled": isnestedgroupenabled,
           "port": PORT,
           "servers": [
               HOSTNAME_OR_IP_ADDRESS
@@ -630,53 +640,69 @@ def disable_ad(username, token, expected_status=200):
     print "Disable ActiveDirectory request for " + username + " " + str(expected_status)
 
 
-def enable_ad_nestedgroups(username, token, expected_status=200):
+def search_ad_users(searchkey, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    activeDirectoryConfig = {
-          "accessMode": "unrestricted",
-          "certificate": CA_CERTIFICATE,
-          "connectionTimeout": CONNECTION_TIMEOUT,
-          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
-          "groupDNAttribute": "distinguishedName",
-          "groupMemberMappingAttribute": "member",
-          "groupMemberUserAttribute": "distinguishedName",
-          "groupNameAttribute": "name",
-          "groupObjectClass": "group",
-          "groupSearchAttribute": "sAMAccountName",
-          "nestedGroupMembershipEnabled": True,
-          "port": PORT,
-          "servers": [
-              HOSTNAME_OR_IP_ADDRESS
-          ],
-          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
-          "tls": get_tls(CA_CERTIFICATE),
-          "userDisabledBitMask": 2,
-          "userEnabledAttribute": "userAccountControl",
-          "userLoginAttribute": "sAMAccountName",
-          "userNameAttribute": "name",
-          "userObjectClass": "person",
-          "userSearchAttribute": "sAMAccountName|sn|givenName",
-          "userSearchBase": USER_SEARCH_BASE,
-          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-    }
+    auth_setup_data = setup["auth_setup_data"]
 
-    ca_cert = activeDirectoryConfig["certificate"]
-    activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
-
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "activeDirectoryConfig": activeDirectoryConfig,
-      "enabled": True,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
+                      json={'name': searchkey, 'principalType': 'user', 'responseType': 'json'},
+                       verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable ActiveDirectory nestedgroup request for " + username + " " + str(expected_status)
+
+    if r.status_code == 200:
+        print r.json()
+        data = r.json()['data']
+        print data
+        assert len(data) == 2
+        print data
+        assert data[0].get('id') == auth_setup_data["search_ad_users"][0]
+        assert data[1].get('id') == auth_setup_data["search_ad_users"][1]
+
+
+def search_ad_users_fake(searchkey, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
+                      json={'name': searchkey, 'principalType': 'user', 'responseType': 'json'},
+                       verify=False, headers=headers)
+    assert r.status_code == expected_status
+
+    if r.status_code == 200:
+        print r.json()
+        data = r.json()['data']
+        print data
+        assert len(data) == 0
+
+
+def search_ad_groups(searchkey, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    auth_setup_data = setup["auth_setup_data"]
+    r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
+                      json={'name': searchkey, 'principalType': 'group', 'responseType': 'json'},
+                      verify=False, headers=headers)
+    assert r.status_code == expected_status
+
+    if r.status_code == 200:
+        data = r.json()['data']
+        assert len(data) == 2
+        assert data[0].get('id') == auth_setup_data["search_ad_groups"][0]
+        assert data[1].get('id') == auth_setup_data["search_ad_groups"][1]
+
+
+def search_ad_groups_fake(searchkey, token, expected_status=200):
+    headers = {'Authorization': 'Bearer ' + token}
+    r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
+                      json={'name': searchkey, 'principalType': 'group', 'responseType': 'json'},
+                      verify=False, headers=headers)
+    assert r.status_code == expected_status
+
+    if r.status_code == 200:
+        data = r.json()['data']
+        assert len(data) == 0
 
 
 def enable_freeipa(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-        "ldapConfig": {
+    freeIpaConfig = {
             "accessMode": "unrestricted",
             "certificate": CA_CERTIFICATE,
             "connectionTimeout": CONNECTION_TIMEOUT,
@@ -703,10 +729,17 @@ def enable_freeipa(username, token, expected_status=200):
             "userSearchAttribute": "uid|sn|givenName",
             "userSearchBase": USER_SEARCH_BASE,
             "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
-        },
+        }
+
+    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
+        "ldapConfig": freeIpaConfig,
         "username": username,
         "password": PASSWORD
     }, verify=False, headers=headers)
+
+    ca_cert = freeIpaConfig["certificate"]
+    freeIpaConfig["certificate"] = ca_cert.replace('\\n', '\n')
+
     assert r.status_code == expected_status
     print "Enable freeIpa request for " + username + " " + str(expected_status)
 

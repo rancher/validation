@@ -70,5 +70,19 @@
     "testcommagroup",
     "testuser1",
     "test(san)&abc"
+  ],
+  "user_search_filter": "(memberOf=CN=finalgroup1,CN=Users,DC=testad,DC=rancher,DC=io)",
+  "user_search_filter_fake": "fakeusersearch_123",
+  "user_search_key": "final",
+  "group_search_filter": "(|(cn=finalgroup1)(cn=finalgroup2))",
+  "group_search_filter_fake": "fakegroupsearch_123",
+  "group_search_key": "finalgroup",
+  "search_ad_users": [
+    "activedirectory_user://CN=final user,CN=Users,DC=testad,DC=rancher,DC=io",
+    "activedirectory_user://CN=finaluser4,CN=Users,DC=testad,DC=rancher,DC=io"
+  ],
+   "search_ad_groups": [
+    "activedirectory_group://CN=finalgroup1,CN=Users,DC=testad,DC=rancher,DC=io",
+    "activedirectory_group://CN=finalgroup2,CN=Users,DC=testad,DC=rancher,DC=io"
   ]
 }
