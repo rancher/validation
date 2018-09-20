@@ -60,7 +60,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
                 }
 
                 stage('Run provisioning tests') {
-                    params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}") ]
+                    params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}"), string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}") ]
 
                     jobs["custom"] = { build job: 'v3_test_custom_cluster', parameters: params}
                     jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }
