@@ -116,15 +116,19 @@ def test_dns_record_type_selector():
     create_and_validate_dns_record(record, expected_ips)
 
 
-def create_and_validate_dns_record(record, expected):
-    testclient_pods = namespace["testclient_pods"]
-    create_dns_record(record)
+def create_and_validate_dns_record(record, expected, p_client=None,
+                                   testclient_pods=None):
+    if testclient_pods is None:
+        testclient_pods = namespace["testclient_pods"]
+    create_dns_record(record, p_client)
+    assert len(testclient_pods) > 0
     for pod in testclient_pods:
         validate_dns_record(pod, record, expected)
 
 
-def create_dns_record(record):
-    p_client = namespace["p_client"]
+def create_dns_record(record, p_client=None):
+    if p_client is None:
+        p_client = namespace["p_client"]
     created_record = p_client.create_dns_record(record)
 
     wait_for_condition(
