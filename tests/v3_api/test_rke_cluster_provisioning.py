@@ -19,40 +19,47 @@ AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 
 engine_install_url = "https://releases.rancher.com/install-docker/17.03.sh"
-rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
-              "ignoreDockerVersion": False,
-              "network": {"type": "networkConfig", "plugin": "canal"},
-              "type": "rancherKubernetesEngineConfig"
-              }
+rke_config = {
+    "addonJobTimeout": 30,
+    "authentication":
+    {"strategy": "x509",
+     "type": "authnConfig"},
+    "ignoreDockerVersion": True,
+    "ingress":
+        {"provider": "nginx",
+         "type": "ingressConfig"},
+    "monitoring":
+        {"provider": "metrics-server",
+         "type": "monitoringConfig"},
+    "network":
+        {"plugin": "canal"},
+    "services": {
+        "etcd": {
+            "extraArgs":
+                {"heartbeat-interval": 500,
+                 "election-timeout": 5000},
+            "snapshot": False,
+            "type": "etcdService"},
+        "kubeApi": {
+            "podSecurityPolicy": False,
+            "serviceNodePortRange": "30000-32767",
+            "type": "kubeAPIService"}},
+    "sshAgentAuth": False}
 
-rke_config_aws_provider = {"authentication": {"type": "authnConfig",
-                                              "strategy": "x509"},
-                           "ignoreDockerVersion": False,
-                           "network": {"type": "networkConfig",
-                                       "plugin": "canal"},
-                           "type": "rancherKubernetesEngineConfig",
-                           "cloudProvider": {"name": "aws",
-                                             "type": "cloudProvider",
-                                             "awsCloudProvider":
-                                                 {"type": "awsCloudProvider"}}
-                           }
+rke_config_aws_provider = rke_config.copy()
+rke_config_aws_provider["cloudProvider"] = {"name": "aws",
+                                            "type": "cloudProvider",
+                                            "awsCloudProvider":
+                                            {"type": "awsCloudProvider"}}
 
-
-rke_config_azure_provider = {"authentication": {"type": "authnConfig",
-                                                "strategy": "x509"},
-                             "ignoreDockerVersion": False,
-                             "network": {"type": "networkConfig",
-                                         "plugin": "canal"},
-                             "type": "rancherKubernetesEngineConfig",
-                             "cloudProvider": {
-                             "type": "cloudProvider",
-                             "name": "azure",
-                             "azureCloudProvider": {
-                                 "aadClientId": AZURE_CLIENT_ID,
-                                 "aadClientSecret": AZURE_CLIENT_SECRET,
-                                 "subscriptionId": AZURE_SUBSCRIPTION_ID,
-                                 "tenantId": AZURE_TENANT_ID}}
-                             }
+rke_config_azure_provider = rke_config.copy()
+rke_config_azure_provider["cloudProvider"] = {
+    "name": "azure",
+    "azureCloudProvider": {
+        "aadClientId": AZURE_CLIENT_ID,
+        "aadClientSecret": AZURE_CLIENT_SECRET,
+        "subscriptionId": AZURE_SUBSCRIPTION_ID,
+        "tenantId": AZURE_TENANT_ID}}
 
 if_stress_enabled = pytest.mark.skipif(
     not os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT'),
