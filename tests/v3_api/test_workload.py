@@ -234,12 +234,10 @@ def test_wl_pause_orchestration():
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) >= 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
+
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testworkload")
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     namespace["p_client"] = p_client
     namespace["ns"] = ns

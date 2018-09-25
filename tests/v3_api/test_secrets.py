@@ -2,6 +2,7 @@ from common import *    # NOQA
 import pytest
 import base64
 
+CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
 
@@ -169,12 +170,9 @@ def test_edit_secret_single_ns():
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
 
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) >= 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testsecret")
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     c_client = get_cluster_client_for_token(cluster, ADMIN_TOKEN)
     namespace["p_client"] = p_client

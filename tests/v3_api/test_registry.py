@@ -1,6 +1,7 @@
 from common import *   # NOQA
 import pytest
 
+CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 REGISTRY_USER_NAME = os.environ.get('RANCHER_REGISTRY_USER_NAME', "None")
 REGISTRY_PASSWORD = os.environ.get('RANCHER_REGISTRY_PASSWORD', "None")
@@ -165,11 +166,11 @@ def create_registry_validate_workload(p_client, ns=None, allns=False):
                              "password": REGISTRY_PASSWORD}}
     if allns:
         registry = p_client.create_dockerCredential(
-                   registries=registries, name=name)
+            registries=registries, name=name)
     else:
         registry = p_client.create_namespacedDockerCredential(
-                    registries=registries, name=name,
-                    namespaceId=ns.id)
+            registries=registries, name=name,
+            namespaceId=ns.id)
 
     create_validate_workload(p_client, ns)
 
@@ -212,12 +213,9 @@ def create_validate_workload_with_invalid_registry(p_client, ns):
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) >= 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testregistry")
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     c_client = get_cluster_client_for_token(cluster, ADMIN_TOKEN)
     namespace["p_client"] = p_client
