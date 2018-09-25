@@ -3,6 +3,8 @@ import pytest
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 random_password = random_test_name("pass")
 
+PROJECT_ISOLATION = os.environ.get('RANCHER_PROJECT_ISOLATION', "disabled")
+
 
 def test_connectivity_between_pods():
     p_client = namespace["p_client"]
@@ -64,19 +66,19 @@ def test_connectivity_between_pods():
 
     check_connectivity_between_workload_pods(
         p2_client, workload2, random_password)
+    allow_connectivity = True
+    if PROJECT_ISOLATION == "enabled":
+        allow_connectivity = False
     check_connectivity_between_workloads(
         p_client, workload, p2_client, workload2,
-        random_password, allow_connectivity=False)
+        random_password, allow_connectivity=allow_connectivity)
 
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
-    client = get_admin_client()
-    clusters = client.list_cluster()
-    assert len(clusters) >= 1
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testnp")
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     namespace["p_client"] = p_client
     namespace["ns"] = ns

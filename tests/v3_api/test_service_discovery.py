@@ -1,7 +1,7 @@
 from common import *  # NOQA
 import pytest
 
-CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
+CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
 RANCHER_CLEANUP_PROJECT = os.environ.get("RANCHER_CLEANUP_PROJECT", "True")
 namespace = {"p_client": None, "ns": None, "cluster": None,
              "project": None, "testclient_pods": [], "workload": None}
@@ -141,18 +141,10 @@ def create_dns_record(record, p_client=None):
 
 @pytest.fixture(scope='module', autouse="True")
 def setup(request):
-    client = get_admin_client()
-
-    if CLUSTER_NAME == "":
-        clusters = client.list_cluster()
-    else:
-        clusters = client.list_cluster(name=CLUSTER_NAME)
-    assert len(clusters) >= 1
-
-    cluster = clusters[0]
+    client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
 
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testsd")
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     c_client = get_cluster_client_for_token(cluster, ADMIN_TOKEN)
 

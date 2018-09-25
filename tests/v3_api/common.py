@@ -21,6 +21,7 @@ MACHINE_TIMEOUT = os.environ.get('MACHINE_TIMEOUT', "1200")
 
 TEST_CLIENT_IMAGE = "sangeetha/testclient"
 TEST_TARGET_IMAGE = "sangeetha/testnewhostrouting"
+CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
 
 
 def random_str():
@@ -636,7 +637,8 @@ def check_connectivity_between_workloads(p_client1, workload1, p_client2,
     wl2_pods = p_client2.list_pod(workloadId=workload2.id)
     for pod in wl1_pods:
         for o_pod in wl2_pods:
-            check_connectivity_between_pods(pod, o_pod, password)
+            check_connectivity_between_pods(pod, o_pod, password,
+                                            allow_connectivity)
 
 
 def check_connectivity_between_workload_pods(p_client, workload, password):
@@ -727,7 +729,10 @@ def wait_for_pods_in_workload(p_client, workload, pod_count,
 
 def get_admin_client_and_cluster():
     client = get_admin_client()
-    clusters = client.list_cluster()
+    if CLUSTER_NAME == "":
+        clusters = client.list_cluster()
+    else:
+        clusters = client.list_cluster(name=CLUSTER_NAME)
     assert len(clusters) > 0
     cluster = clusters[0]
     return client, cluster
