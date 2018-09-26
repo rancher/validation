@@ -34,6 +34,8 @@ PRIVATE_IMAGES = {
         'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
     "ubuntu-16.04-docker-latest": {
         'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
+    "ubuntu-16.04-docker-18.06": {
+        'image': 'ami-03c17ef3311dfb21e', 'ssh_user': 'ubuntu'},
     "rhel-7.4-docker-native": {
         'image': 'ami-1f6c477a', 'ssh_user': 'ec2-user'}}
 
