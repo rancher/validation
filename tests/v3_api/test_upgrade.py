@@ -259,7 +259,7 @@ def create_project_resources():
 
 def validate_existing_project_resources():
     cluster = namespace["cluster"]
-    project_name = validate_prefix + "p1"
+    project_name = validate_prefix + "-p1"
     ns_name = validate_prefix + "-ns1"
     ns2_name = validate_prefix + "-ns2"
 
