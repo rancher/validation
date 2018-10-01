@@ -7,26 +7,44 @@ from test_secrets \
 import pytest
 import base64
 
-cluster_name = os.environ.get('RANCHER_CLUSTER_NAME', "http://localhost:80")
+cluster_name = os.environ.get('RANCHER_CLUSTER_NAME', "")
 validate_prefix = os.environ.get('RANCHER_VALIDATE_RESOURCES_PREFIX', "step0")
 create_prefix = os.environ.get('RANCHER_CREATE_RESOURCES_PREFIX', "step1")
+cluster_details = {}
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None,
              "testclient_pods": []}
 upgrade_check_stage = os.environ.get('RANCHER_UPGRADE_CHECK', "preupgrade")
 
-wl_name = create_prefix + "-testwl"
-sd_name = create_prefix + "-testsd"
-sd_wlname1 = create_prefix + "-testsd1"
-sd_wlname2 = create_prefix + "-testsd2"
-ingress_name = create_prefix + "-testingress"
-ingress_wlname = create_prefix + "-testingresswl"
+wl_name = "-testwl"
+sd_name = "-testsd"
+sd_wlname1 = "-testsd1"
+sd_wlname2 = "-testsd2"
+ingress_name1 = "-testingress1"
+ingress_name2 = "-testingress2"
+ingress_wlname1 = "-testingresswl1"
+ingress_wlname2 = "-testingresswl2"
+project_name = "-p1"
+ns_name1 = "-ns1"
+ns_name2 = "-ns2"
 
-wl_name_validate = validate_prefix + "-testwl"
-sd_name_validate = validate_prefix + "-testsd"
-sd_wlname1_validate = validate_prefix + "-testsd1"
-sd_wlname2_validate = validate_prefix + "-testsd2"
-ingress_name_validate = validate_prefix + "-testingress"
-ingress_wlname_validate = validate_prefix + "-testingresswl"
+
+wl_name_create = create_prefix + wl_name
+sd_name_create = create_prefix + sd_name
+sd_wlname1_create = create_prefix + sd_wlname1
+sd_wlname2_create = create_prefix + sd_wlname2
+ingress_name1_create = create_prefix + ingress_name1
+ingress_name2_create = create_prefix + ingress_name2
+ingress_wlname1_create = create_prefix + ingress_wlname1
+ingress_wlname2_create = create_prefix + ingress_wlname2
+
+wl_name_validate = validate_prefix + wl_name
+sd_name_validate = validate_prefix + sd_name
+sd_wlname1_validate = validate_prefix + sd_wlname1
+sd_wlname2_validate = validate_prefix + sd_wlname2
+ingress_name1_validate = validate_prefix + ingress_name1
+ingress_name2_validate = validate_prefix + ingress_name2
+ingress_wlname1_validate = validate_prefix + ingress_wlname1
+ingress_wlname2_validate = validate_prefix + ingress_wlname2
 
 if_post_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "postupgrade",
@@ -47,9 +65,10 @@ def test_upgrade_validate_resources():
     validate_wl(wl_name_validate)
     validate_service_discovery(sd_name_validate,
                                [sd_wlname1_validate, sd_wlname2_validate])
-    validate_ingress_xip_io(ingress_name_validate,
-                            ingress_wlname_validate)
-
+    validate_ingress_xip_io(ingress_name1_validate,
+                            ingress_wlname1_validate)
+    validate_ingress_xip_io(ingress_name2_validate,
+                            ingress_wlname2_validate)
     # Create and validate new resources
     create_project_resources()
     create_and_validate_wl()
@@ -63,9 +82,9 @@ def create_and_validate_wl():
     ns = namespace["ns"]
     con = [{"name": "test1",
             "image": TEST_TARGET_IMAGE}]
-    p_client.create_workload(name=wl_name, containers=con,
+    p_client.create_workload(name=wl_name_create, containers=con,
                              namespaceId=ns.id, scale=2)
-    validate_wl(wl_name)
+    validate_wl(wl_name_create)
 
 
 def validate_wl(workload_name):
@@ -85,7 +104,9 @@ def create_and_validate_ingress_xip_io():
     cluster = namespace["cluster"]
     con = [{"name": "test1",
             "image": TEST_TARGET_IMAGE}]
-    workload = p_client.create_workload(name=ingress_wlname,
+
+    # Ingress with daemonSet target
+    workload = p_client.create_workload(name=ingress_wlname1_create,
                                         containers=con,
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
@@ -95,10 +116,24 @@ def create_and_validate_ingress_xip_io():
     rule = {"host": "xip.io",
             "paths":
                 {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
-    p_client.create_ingress(name=ingress_name,
+    p_client.create_ingress(name=ingress_name1_create,
                             namespaceId=ns.id,
                             rules=[rule])
-    validate_ingress_xip_io(ingress_name, ingress_wlname)
+    validate_ingress_xip_io(ingress_name1_create, ingress_wlname1_create)
+
+    # Ingress with Deployment target
+    workload = p_client.create_workload(name=ingress_wlname2_create,
+                                        containers=con,
+                                        namespaceId=ns.id, scale=2)
+    validate_wl(ingress_wlname2_create)
+    path = "/name.html"
+    rule = {"host": "xip.io",
+            "paths":
+                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+    p_client.create_ingress(name=ingress_name2_create,
+                            namespaceId=ns.id,
+                            rules=[rule])
+    validate_ingress_xip_io(ingress_name2_create, ingress_wlname2_create)
 
 
 def validate_ingress_xip_io(ing_name, workload_name):
@@ -123,14 +158,14 @@ def create_and_validate_service_discovery():
 
     con = [{"name": "test1",
             "image": TEST_TARGET_IMAGE}]
-    workload = p_client.create_workload(name=sd_wlname1,
+    workload = p_client.create_workload(name=sd_wlname1_create,
                                         containers=con,
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     validate_workload(p_client, workload, "daemonSet", ns.name,
                       len(get_schedulable_nodes(cluster)))
 
-    additional_workload = p_client.create_workload(name=sd_wlname2,
+    additional_workload = p_client.create_workload(name=sd_wlname2_create,
                                                    containers=con,
                                                    namespaceId=ns.id,
                                                    scale=1)
@@ -140,19 +175,21 @@ def create_and_validate_service_discovery():
 
     record = {"type": "dnsRecord",
               "targetWorkloadIds": [workload["id"], additional_workload["id"]],
-              "name": sd_name,
+              "name": sd_name_create,
               "namespaceId": ns.id}
 
     create_dns_record(record, p_client)
-    validate_service_discovery(sd_name, [sd_wlname1, sd_wlname2])
+    validate_service_discovery(sd_name_create,
+                               [sd_wlname1_create, sd_wlname2_create])
 
 
 def validate_service_discovery(sd_record_name, workload_names):
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     target_wls = []
-    for wl_name in workload_names:
-        workloads = p_client.list_workload(name=wl_name, namespaceId=ns.id)
+    for wl_name_create in workload_names:
+        workloads = p_client.list_workload(
+            name=wl_name_create, namespaceId=ns.id)
         assert len(workloads) == 1
         workload = workloads[0]
         target_wls.append(workload)
@@ -181,20 +218,20 @@ def create_wokloads_with_secret():
     ns = namespace["ns"]
 
     secret_name = create_prefix + "-testsecret"
-    wl_name1 = create_prefix + "-testwl1withsec"
-    wl_name2 = create_prefix + "-testwl2withsec"
+    wl_name_create1 = create_prefix + "-testwl1withsec"
+    wl_name_create2 = create_prefix + "-testwl2withsec"
 
     secret = create_secret(keyvaluepair, p_client=p_client, name=secret_name)
     create_and_validate_workload_with_secret_as_volume(p_client,
                                                        secret,
                                                        ns,
                                                        keyvaluepair,
-                                                       name=wl_name1)
+                                                       name=wl_name_create1)
     create_and_validate_workload_with_secret_as_env_variable(p_client,
                                                              secret,
                                                              ns,
                                                              keyvaluepair,
-                                                             wl_name2)
+                                                             wl_name_create2)
 
 
 @pytest.fixture(scope='module', autouse="True")
@@ -215,8 +252,8 @@ def create_project_client(request):
 def create_project_resources():
     cluster = namespace["cluster"]
     p, ns = create_project_and_ns(ADMIN_TOKEN, cluster,
-                                  project_name=create_prefix + "-p1",
-                                  ns_name=create_prefix + "-ns1")
+                                  project_name=create_prefix + project_name,
+                                  ns_name=create_prefix + ns_name1)
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
 
     namespace["p_client"] = p_client
@@ -244,7 +281,7 @@ def create_project_resources():
     namespace["testclient_pods"].append(pod)
 
     new_ns = create_ns(get_cluster_client_for_token(cluster, ADMIN_TOKEN),
-                       cluster, p, ns_name=create_prefix + "-ns2")
+                       cluster, p, ns_name=create_prefix + ns_name2)
 
     workload = p_client.create_workload(name=wlname,
                                         containers=con,
@@ -259,13 +296,13 @@ def create_project_resources():
 
 def validate_existing_project_resources():
     cluster = namespace["cluster"]
-    project_name = validate_prefix + "-p1"
-    ns_name = validate_prefix + "-ns1"
-    ns2_name = validate_prefix + "-ns2"
+    p_name = validate_prefix + project_name
+    ns_name = validate_prefix + ns_name1
+    ns2_name = validate_prefix + ns_name2
 
     # Get existing project
     client = get_admin_client()
-    projects = client.list_project(name=project_name,
+    projects = client.list_project(name=p_name,
                                    clusterId=cluster.id)
     assert len(projects) == 1
     project = projects[0]
