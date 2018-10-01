@@ -54,13 +54,17 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
                 }
 
                 stage('Deploy Rancher server') {
-                    sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests /bin/bash -c \'pytest -v -s --junit-xml=setup.xml -k test_deploy_rancher_server tests/v3_api/\'"
+                    sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests" +
+                       "/bin/bash -c \'export RANCHER_SERVER_VERSION=${rancher_version} && pytest -v -s --junit-xml=setup.xml" +
+                       "-k test_deploy_rancher_server tests/v3_api/\'"
                     sh "docker cp ${JOB_NAME}${BUILD_NUMBER}:/src/rancher-validation/tests/v3_api/rancher_env.config ."
                     load "rancher_env.config"
                 }
 
                 stage('Run provisioning tests') {
-                    params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}"), string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}") ]
+                    params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"),
+                               string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}"),
+                               string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}") ]
 
                     jobs["custom"] = { build job: 'v3_test_custom_cluster', parameters: params}
                     jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }
