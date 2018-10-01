@@ -471,7 +471,7 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
                         public_endpoint["hostname"]
                     if "path" in public_endpoint.keys():
                         url += public_endpoint["path"]
-    time.sleep(5)
+    time.sleep(10)
     target_hit_list = target_name_list[:]
     for i in range(1, 20):
         if len(target_hit_list) == 0:
