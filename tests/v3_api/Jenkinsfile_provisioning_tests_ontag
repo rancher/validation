@@ -54,8 +54,8 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
                 }
 
                 stage('Deploy Rancher server') {
-                    sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests" +
-                       "/bin/bash -c \'export RANCHER_SERVER_VERSION=${rancher_version} && pytest -v -s --junit-xml=setup.xml" +
+                    sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests " +
+                       "/bin/bash -c \'export RANCHER_SERVER_VERSION=${rancher_version} && pytest -v -s --junit-xml=setup.xml " +
                        "-k test_deploy_rancher_server tests/v3_api/\'"
                     sh "docker cp ${JOB_NAME}${BUILD_NUMBER}:/src/rancher-validation/tests/v3_api/rancher_env.config ."
                     load "rancher_env.config"
