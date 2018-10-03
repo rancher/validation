@@ -1,4 +1,4 @@
-from common import *   # NOQA
+from .common import *   # NOQA
 
 import requests
 
@@ -52,53 +52,56 @@ CATTLE_AUTH_DISABLE_URL = CATTLE_AUTH_PROVIDER_URL + "?action=disable"
 
 def test_custom_user_and_group_filter_for_AD():
     disable_ad("testuser1", ADMIN_TOKEN)
-    enable_ad_with_customized_filter("testuser1", "(memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)", "", ADMIN_TOKEN)
+    enable_ad_with_customized_filter(
+        "testuser1", "(memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)", "", ADMIN_TOKEN)
     search_ad_users("testuser", ADMIN_TOKEN)
 
     disable_ad("testuser1", ADMIN_TOKEN)
-    enable_ad_with_customized_filter("testuser1", "", "(cn=testgroup2)", ADMIN_TOKEN)
+    enable_ad_with_customized_filter(
+        "testuser1", "", "(cn=testgroup2)", ADMIN_TOKEN)
     search_ad_groups("testgroup", ADMIN_TOKEN)
 
 
 def disable_ad(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
-      "enabled": False,
-      "username": username,
-      "password": PASSWORD
+        "enabled": False,
+        "username": username,
+        "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Disable ActiveDirectory request for " + username + " " + str(expected_status)
+    print("Disable ActiveDirectory request for " +
+          username + " " + str(expected_status))
 
 
 def enable_ad_with_customized_filter(username, usersearchfilter, groupsearchfilter, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
-          "accessMode": "unrestricted",
-          "userSearchFilter": usersearchfilter,
-          "groupSearchFilter": groupsearchfilter,
-          "connectionTimeout": CONNECTION_TIMEOUT,
-          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
-          "groupDNAttribute": "distinguishedName",
-          "groupMemberMappingAttribute": "member",
-          "groupMemberUserAttribute": "distinguishedName",
-          "groupNameAttribute": "name",
-          "groupObjectClass": "group",
-          "groupSearchAttribute": "sAMAccountName",
-          "nestedGroupMembershipEnabled": False,
-          "port": PORT,
-          "servers": [
-              HOSTNAME_OR_IP_ADDRESS
-          ],
-          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
-          "userDisabledBitMask": 2,
-          "userEnabledAttribute": "userAccountControl",
-          "userLoginAttribute": "sAMAccountName",
-          "userNameAttribute": "name",
-          "userObjectClass": "person",
-          "userSearchAttribute": "sAMAccountName|sn|givenName",
-          "userSearchBase": USER_SEARCH_BASE,
-          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+        "accessMode": "unrestricted",
+        "userSearchFilter": usersearchfilter,
+        "groupSearchFilter": groupsearchfilter,
+        "connectionTimeout": CONNECTION_TIMEOUT,
+        "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
+        "groupDNAttribute": "distinguishedName",
+        "groupMemberMappingAttribute": "member",
+        "groupMemberUserAttribute": "distinguishedName",
+        "groupNameAttribute": "name",
+        "groupObjectClass": "group",
+        "groupSearchAttribute": "sAMAccountName",
+        "nestedGroupMembershipEnabled": False,
+        "port": PORT,
+        "servers": [
+            HOSTNAME_OR_IP_ADDRESS
+        ],
+        "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
+        "userDisabledBitMask": 2,
+        "userEnabledAttribute": "userAccountControl",
+        "userLoginAttribute": "sAMAccountName",
+        "userNameAttribute": "name",
+        "userObjectClass": "person",
+        "userSearchAttribute": "sAMAccountName|sn|givenName",
+        "userSearchBase": USER_SEARCH_BASE,
+        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
     }
 
     r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
@@ -108,34 +111,40 @@ def enable_ad_with_customized_filter(username, usersearchfilter, groupsearchfilt
         "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable ActiveDirectory request for " + username + " " + str(expected_status)
+    print("Enable ActiveDirectory request for " +
+          username + " " + str(expected_status))
 
 
 def search_ad_users(searchkey, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
-                      json={'name': searchkey, 'principalType': 'user', 'responseType': 'json'},
-                       verify=False, headers=headers)
+                      json={'name': searchkey, 'principalType': 'user',
+                            'responseType': 'json'},
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
 
     if r.status_code == 200:
-        print r.json()
+        print(r.json())
         data = r.json()['data']
-        print data
+        print(data)
         assert len(data) == 2
-        print data
-        assert data[0].get('id') == "activedirectory_user://CN=test user40,CN=Users,DC=tad,DC=rancher,DC=io"
-        assert data[1].get('id') == "activedirectory_user://CN=test user41,CN=Users,DC=tad,DC=rancher,DC=io"
+        print(data)
+        assert data[0].get(
+            'id') == "activedirectory_user://CN=test user40,CN=Users,DC=tad,DC=rancher,DC=io"
+        assert data[1].get(
+            'id') == "activedirectory_user://CN=test user41,CN=Users,DC=tad,DC=rancher,DC=io"
 
 
 def search_ad_groups(searchkey, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     r = requests.post(CATTLE_AUTH_PRINCIPAL_URL,
-                      json={'name': searchkey, 'principalType': 'group', 'responseType': 'json'},
+                      json={'name': searchkey, 'principalType': 'group',
+                            'responseType': 'json'},
                       verify=False, headers=headers)
     assert r.status_code == expected_status
 
     if r.status_code == 200:
         data = r.json()['data']
         assert len(data) == 1
-        assert data[0].get('id') == "activedirectory_group://CN=testgroup2,CN=Users,DC=tad,DC=rancher,DC=io"
+        assert data[0].get(
+            'id') == "activedirectory_group://CN=testgroup2,CN=Users,DC=tad,DC=rancher,DC=io"

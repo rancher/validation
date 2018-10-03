@@ -2,8 +2,8 @@ import digitalocean
 import os
 import time
 
-from cloud_provider import CloudProviderBase
-from node import Node
+from .cloud_provider import CloudProviderBase
+from .node import Node
 
 
 PRIVATE_IMAGES = {

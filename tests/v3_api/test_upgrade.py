@@ -1,11 +1,13 @@
-from common import *   # NOQA
-from test_service_discovery import create_dns_record
-from test_secrets import create_secret
-from test_secrets import create_and_validate_workload_with_secret_as_volume
-from test_secrets \
-    import create_and_validate_workload_with_secret_as_env_variable
-import pytest
 import base64
+
+import pytest
+
+from .common import *  # NOQA
+from .test_secrets import (
+    create_and_validate_workload_with_secret_as_env_variable,
+    create_and_validate_workload_with_secret_as_volume,
+    create_secret)
+from .test_service_discovery import create_dns_record
 
 cluster_name = os.environ.get('RANCHER_CLUSTER_NAME', "")
 validate_prefix = os.environ.get('RANCHER_VALIDATE_RESOURCES_PREFIX', "step0")

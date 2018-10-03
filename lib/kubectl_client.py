@@ -34,7 +34,7 @@ class KubectlClient(object):
             Adds --output=json to options
             Does not override if output is passed in!
         """
-        if 'output' not in cli_options.keys():
+        if 'output' not in list(cli_options.keys()):
             cli_options['output'] = 'json'
         return cli_options
 
@@ -49,7 +49,7 @@ class KubectlClient(object):
                 For cli option: 'as' => 'as_user'
         """
         command_options = ""
-        for k, v in kwargs.iteritems():
+        for k, v in kwargs.items():
             # Do not include values that are none
             if v is None:
                 continue
@@ -68,12 +68,12 @@ class KubectlClient(object):
             self.kube_config_path, cmd)
         if json_out:
             command += ' -o json'
-        print "Running kubectl command: {}".format(command)
+        print("Running kubectl command: {}".format(command))
         start_time = time.time()
         result = run(command, warn=True, hide=self._hide)
         end_time = time.time()
-        print 'Run time for command {0}: {1} seconds'.format(
-            command, end_time - start_time)
+        print('Run time for command {0}: {1} seconds'.format(
+            command, end_time - start_time))
         return result
 
     def execute_kubectl(self, cmd, **cli_options):
@@ -81,12 +81,12 @@ class KubectlClient(object):
         cli_options['kubeconfig'] = self.kube_config_path
         command = 'kubectl {0}{1}'.format(
             cmd, self._cli_options(**cli_options))
-        print "Running kubectl command: {}".format(command)
+        print("Running kubectl command: {}".format(command))
         start_time = time.time()
         result = run(command, warn=True, hide=self._hide)
         end_time = time.time()
-        print 'Run time for command {0}: {1} seconds'.format(
-            command, end_time - start_time)
+        print('Run time for command {0}: {1} seconds'.format(
+            command, end_time - start_time))
         return result
 
     def exec_cmd(self, pod, cmd, namespace):
@@ -167,9 +167,9 @@ class KubectlClient(object):
             if len(pods.get('items', [])) == number_of_pods:
                 for pod in pods['items']:
                     if pod['status']['phase'] != state:
-                        print "Pod '{0}' not {1} is {2}!".format(
+                        print("Pod '{0}' not {1} is {2}!".format(
                             pod['metadata']['name'], state,
-                            pod['status']['phase'])
+                            pod['status']['phase']))
                         break
                 else:
                     time.sleep(15)
@@ -193,8 +193,8 @@ class KubectlClient(object):
         while True:
             pod = self.get_resource('pod', name=name, **cli_options)
             if pod['status']['phase'] != state:
-                print "Pod '{0}' not {1} is {2}!".format(
-                    pod['metadata']['name'], state, pod['status']['phase'])
+                print("Pod '{0}' not {1} is {2}!".format(
+                    pod['metadata']['name'], state, pod['status']['phase']))
             else:
                 time.sleep(15)
                 return pod

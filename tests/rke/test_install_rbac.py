@@ -1,5 +1,5 @@
-from conftest import *  # NOQA
-from common import *
+from .conftest import *  # NOQA
+from .common import *  # NOQA
 
 
 @pytest.mark.skip("Use as an example of how to test RBAC")

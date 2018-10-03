@@ -1,8 +1,8 @@
-from common import *   # NOQA
-
-import requests
 import pytest
-import json
+import requests
+import os
+
+from .common import *  # NOQA
 
 AUTH_PROVIDER = os.environ.get('RANCHER_AUTH_PROVIDER', "")
 
@@ -48,7 +48,7 @@ setup = {"cluster1": None,
          "cluster2": None,
          "project2": None,
          "ns2": None,
-         "auth_setup_data": None,
+         "auth_setup_data": {},
          "permission_denied_code": 403}
 
 auth_setup_fname = \
@@ -468,7 +468,7 @@ def login(username, password, expected_status=201):
         'responseType': 'json',
     }, verify=False)
     assert r.status_code == expected_status
-    print "Login request for " + username + " " + str(expected_status)
+    print("Login request for " + username + " " + str(expected_status))
     if expected_status == 201:
         token = r.json()['token']
     return token
@@ -521,7 +521,7 @@ def enable_openldap(username, token, expected_status=200):
       "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable openLdap request for " + username + " " + str(expected_status)
+    print("Enable openLdap request for " + username + " " + str(expected_status))
 
 
 def disable_openldap(username, token, expected_status=200):
@@ -529,9 +529,9 @@ def disable_openldap(username, token, expected_status=200):
     r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
         'username': username,
         'password': PASSWORD
-    }, verify=False,headers=headers)
+    }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Disable openLdap request for " + username + " " + str(expected_status)
+    print("Disable openLdap request for " + username + " " + str(expected_status))
 
 
 def enable_openldap_nestedgroup(username, token, expected_status=200):
@@ -573,7 +573,7 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
       "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable openLdap nestedgroup request for " + username + " " + str(expected_status)
+    print("Enable openLdap nestedgroup request for " + username + " " + str(expected_status))
 
 
 def enable_ad(username, token, expected_status=200):
@@ -616,7 +616,7 @@ def enable_ad(username, token, expected_status=200):
       "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable ActiveDirectory request for " + username + " " + str(expected_status)
+    print("Enable ActiveDirectory request for " + username + " " + str(expected_status))
 
 
 def disable_ad(username, token, expected_status=200):
@@ -627,7 +627,7 @@ def disable_ad(username, token, expected_status=200):
       "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Disable ActiveDirectory request for " + username + " " + str(expected_status)
+    print("Disable ActiveDirectory request for " + username + " " + str(expected_status))
 
 
 def enable_ad_nestedgroups(username, token, expected_status=200):
@@ -670,7 +670,7 @@ def enable_ad_nestedgroups(username, token, expected_status=200):
       "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable ActiveDirectory nestedgroup request for " + username + " " + str(expected_status)
+    print("Enable ActiveDirectory nestedgroup request for " + username + " " + str(expected_status))
 
 
 def enable_freeipa(username, token, expected_status=200):
@@ -708,7 +708,7 @@ def enable_freeipa(username, token, expected_status=200):
         "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Enable freeIpa request for " + username + " " + str(expected_status)
+    print("Enable freeIpa request for " + username + " " + str(expected_status))
 
 
 def disable_freeipa(username, token, expected_status=200):
@@ -719,7 +719,7 @@ def disable_freeipa(username, token, expected_status=200):
         "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print "Disable freeIpa request for " + username + " " + str(expected_status)
+    print("Disable freeIpa request for " + username + " " + str(expected_status))
 
 
 def principal_lookup(name, token):
@@ -746,7 +746,7 @@ def add_users_to_siteAccess(token, access_mode, allowed_principal_ids):
         'accessMode': access_mode,
         'responseType': 'json',
     }, verify=False, headers=headers)
-    print r.json()
+    print(r.json())
 
 
 def assign_user_to_cluster(client, principal_id, cluster, role_template_id):
@@ -783,7 +783,7 @@ def create_project_client(request):
         assert False, "Auth Provider set is not supported"
     setup["auth_setup_data"] = load_setup_data()
     client = get_admin_client()
-    clusters = client.list_cluster()
+    clusters = client.list_cluster().data
     assert len(clusters) >= 2
     cluster1 = clusters[0]
     for project in client.list_project():

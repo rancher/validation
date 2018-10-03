@@ -1,5 +1,5 @@
-from conftest import *  # NOQA
-from common import *
+from .conftest import *  # NOQA
+from .common import *  # NOQA
 
 
 def test_update_roles_1(test_name, cloud_provider, rke_client, kubectl):

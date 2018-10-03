@@ -1,7 +1,7 @@
 import os
 import time
 
-from conftest import *
+from .conftest import *  # NOQA
 from tests.rke.common import create_rke_cluster, delete_nodes
 
 

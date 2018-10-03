@@ -4,8 +4,8 @@ import time
 from boto3.exceptions import Boto3Error
 import logging
 
-from cloud_provider import CloudProviderBase
-from node import Node
+from .cloud_provider import CloudProviderBase
+from .node import Node
 
 logging.getLogger('boto3').setLevel(logging.CRITICAL)
 logging.getLogger('botocore').setLevel(logging.CRITICAL)
@@ -13,15 +13,15 @@ logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
 AWS_REGION = 'us-east-2'
 AWS_REGION_AZ = 'us-east-2a'
-AWS_SECURITY_GROUP = os.environ.get("AWS_SECURITY_GROUPS",'sg-3076bd59')
-AWS_SECURITY_GROUPS =[AWS_SECURITY_GROUP]
+AWS_SECURITY_GROUP = os.environ.get("AWS_SECURITY_GROUPS", 'sg-3076bd59')
+AWS_SECURITY_GROUPS = [AWS_SECURITY_GROUP]
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
 AWS_CICD_INSTANCE_TAG = os.environ.get(
     "AWS_CICD_INSTANCE_TAG", 'rancher-validation')
 AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.medium')
-AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE","")
+AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE", "")
 
 PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-1.12.6": {
@@ -46,8 +46,7 @@ PUBLIC_AMI = {
         "rhel-7.4": {
             'image': 'ami-0b1e356e', 'ssh_user': 'ec2-user'},
         "ros-1.4.0": {
-            'image': 'ami-504b7435', 'ssh_user': 'rancher'}}
-,
+            'image': 'ami-504b7435', 'ssh_user': 'rancher'}},
     'us-east-1': {
         "ubuntu-16.04": {
             'image': 'ami-cf6c47aa', 'ssh_user': 'ubuntu'},
@@ -119,20 +118,20 @@ class AmazonWebServices(CloudProviderBase):
             ssh_private_key_path = self.master_ssh_key_path
 
         args = {"ImageId": image,
-            "InstanceType": AWS_INSTANCE_TYPE,
-            "MinCount": 1,
-            "MaxCount":1,
-            "TagSpecifications":[{'ResourceType': 'instance', 'Tags': [
-                {'Key': 'Name', 'Value': node_name},
-                {'Key': 'CICD', 'Value': AWS_CICD_INSTANCE_TAG}]}],
-            "KeyName":key_name,
-            "NetworkInterfaces":[{
-                'DeviceIndex': 0,
-                'AssociatePublicIpAddress': True,
-                'Groups': AWS_SECURITY_GROUPS}],
-            "Placement":{'AvailabilityZone': AWS_REGION_AZ},
-            "BlockDeviceMappings": [{"DeviceName": "/dev/sda1","Ebs": {"VolumeSize": 50}}]
-            }
+                "InstanceType": AWS_INSTANCE_TYPE,
+                "MinCount": 1,
+                "MaxCount": 1,
+                "TagSpecifications": [{'ResourceType': 'instance', 'Tags': [
+                    {'Key': 'Name', 'Value': node_name},
+                    {'Key': 'CICD', 'Value': AWS_CICD_INSTANCE_TAG}]}],
+                "KeyName": key_name,
+                "NetworkInterfaces": [{
+                    'DeviceIndex': 0,
+                    'AssociatePublicIpAddress': True,
+                    'Groups': AWS_SECURITY_GROUPS}],
+                "Placement": {'AvailabilityZone': AWS_REGION_AZ},
+                "BlockDeviceMappings": [{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 50}}]
+                }
         if (len(AWS_IAM_PROFILE) > 0):
             args["IamInstanceProfile"] = {'Name': AWS_IAM_PROFILE}
 

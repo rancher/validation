@@ -1,7 +1,7 @@
 import os
 
-from conftest import *  # NOQA
-from common import *
+from .conftest import *  # NOQA
+from .common import *  # NOQA
 
 
 K8S_PREUPGRADE_IMAGE = os.environ.get(

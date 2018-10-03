@@ -1,7 +1,11 @@
-from common import *  # NOQA
+import os
+
 import pytest
 
+from .common import *  # NOQA
+
 CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
+CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 RANCHER_CLEANUP_PROJECT = os.environ.get("RANCHER_CLEANUP_PROJECT", "True")
 namespace = {"p_client": None, "ns": None, "cluster": None,
              "project": None, "testclient_pods": [], "workload": None}
@@ -54,7 +58,7 @@ def test_dns_record_type_workload():
               "name": random_test_name("record"), "namespaceId": ns.id}
 
     expected_ips = []
-    pods = p_client.list_pod(workloadId=workload["id"])
+    pods = p_client.list_pod(workloadId=workload["id"]).data
     for pod in pods:
         expected_ips.append(pod["status"]["podIp"])
 
@@ -88,7 +92,7 @@ def test_dns_record_type_multiple_workloads():
     expected_ips = []
 
     for wl in workloads:
-        pods = p_client.list_pod(workloadId=wl["id"])
+        pods = p_client.list_pod(workloadId=wl["id"]).data
         for pod in pods:
             expected_ips.append(pod["status"]["podIp"])
 
@@ -109,7 +113,7 @@ def test_dns_record_type_selector():
               "name": random_test_name("record"), "namespaceId": ns.id}
 
     expected_ips = []
-    pods = p_client.list_pod(workloadId=workload["id"])
+    pods = p_client.list_pod(workloadId=workload["id"]).data
     for pod in pods:
         expected_ips.append(pod["status"]["podIp"])
 

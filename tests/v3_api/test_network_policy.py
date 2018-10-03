@@ -1,5 +1,7 @@
-from common import *   # NOQA
 import pytest
+
+from .common import *  # NOQA
+
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 random_password = random_test_name("pass")
 
@@ -12,7 +14,7 @@ def test_connectivity_between_pods():
     cluster = namespace["cluster"]
 
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE+":v2",
+            "image": TEST_CLIENT_IMAGE+":v2",
             "ports": [],
             "environment":{"ROOT_PASSWORD": random_password}
             }]
