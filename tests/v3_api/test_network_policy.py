@@ -27,8 +27,7 @@ def test_connectivity_between_pods():
                                         daemonSetConfig={})
     validate_workload(p_client, workload, "daemonSet", ns.name,
                       schedulable_node_count)
-    check_connectivity_between_workload_pods(p_client, workload,
-                                             random_password)
+    check_connectivity_between_workload_pods(p_client, workload)
 
     # Create another namespace in the same project
     # Deploy workloads in this namespace
@@ -43,16 +42,14 @@ def test_connectivity_between_pods():
                                          daemonSetConfig={})
     validate_workload(p_client, workload1, "daemonSet", ns1.name,
                       schedulable_node_count)
-
-    check_connectivity_between_workload_pods(p_client, workload1,
-                                             random_password)
+    check_connectivity_between_workload_pods(p_client, workload1)
     check_connectivity_between_workloads(p_client, workload, p_client,
-                                         workload1, random_password)
+                                         workload1)
 
     # Create new project in the same cluster
     # Create namespace and deploy workloads
-    # Check that pods belonging to different namespace across
-    # different projects cannot communicate
+    # Check communication between pods belonging to different namespace across
+    # different projects
 
     p2, ns2 = create_project_and_ns(ADMIN_TOKEN, cluster)
     p2_client = get_project_client_for_token(p2, ADMIN_TOKEN)
@@ -63,15 +60,13 @@ def test_connectivity_between_pods():
                                           daemonSetConfig={})
     validate_workload(p2_client, workload2, "daemonSet", ns2.name,
                       schedulable_node_count)
-
-    check_connectivity_between_workload_pods(
-        p2_client, workload2, random_password)
+    check_connectivity_between_workload_pods(p2_client, workload2)
     allow_connectivity = True
     if PROJECT_ISOLATION == "enabled":
         allow_connectivity = False
     check_connectivity_between_workloads(
         p_client, workload, p2_client, workload2,
-        random_password, allow_connectivity=allow_connectivity)
+        allow_connectivity=allow_connectivity)
 
 
 @pytest.fixture(scope='module', autouse="True")

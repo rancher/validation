@@ -632,33 +632,31 @@ def delete_cluster(client, cluster):
 
 def check_connectivity_between_workloads(p_client1, workload1, p_client2,
                                          workload2,
-                                         password, allow_connectivity=True):
+                                         allow_connectivity=True):
     wl1_pods = p_client1.list_pod(workloadId=workload1.id)
     wl2_pods = p_client2.list_pod(workloadId=workload2.id)
     for pod in wl1_pods:
         for o_pod in wl2_pods:
-            check_connectivity_between_pods(pod, o_pod, password,
-                                            allow_connectivity)
+            check_connectivity_between_pods(pod, o_pod, allow_connectivity)
 
 
-def check_connectivity_between_workload_pods(p_client, workload, password):
+def check_connectivity_between_workload_pods(p_client, workload):
     pods = p_client.list_pod(workloadId=workload.id)
     for pod in pods:
         for o_pod in pods:
-            check_connectivity_between_pods(pod, o_pod, password)
+            check_connectivity_between_pods(pod, o_pod)
 
 
-def check_connectivity_between_pods(pod1, pod2, password,
-                                    allow_connectivity=True):
+def check_connectivity_between_pods(pod1, pod2, allow_connectivity=True):
     pod_ip = pod2.status.podIp
 
     cmd = "ping -c 1 -W 1 " + pod_ip
     response = kubectl_pod_exec(pod1, cmd)
-    print "Actual ping Response" + str(response)
+    print "Actual ping Response from " + pod1.name + ":" + str(response)
     if allow_connectivity:
-        assert pod_ip in str(response) and "0% packet loss" in str(response)
+        assert pod_ip in str(response) and " 0% packet loss" in str(response)
     else:
-        assert pod_ip in str(response) and "100% packet loss" in str(response)
+        assert pod_ip in str(response) and " 100% packet loss" in str(response)
 
 
 def kubectl_pod_exec(pod, cmd):
