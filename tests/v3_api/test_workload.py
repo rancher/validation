@@ -1,6 +1,6 @@
-from common import *   # NOQA
 import pytest
 
+from .common import *  # NOQA
 
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
@@ -9,7 +9,7 @@ def test_wl_sidekick():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("sidekick")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -29,7 +29,7 @@ def test_wl_deployment():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -41,7 +41,7 @@ def test_wl_statefulset():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -56,7 +56,7 @@ def test_wl_daemonset():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -71,7 +71,7 @@ def test_wl_cronjob():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -88,7 +88,7 @@ def test_wl_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -103,7 +103,7 @@ def test_wl_upgrade():
             firstrevision = revision.id
 
     con = [{"name": "test1",
-           "image": "nginx"}]
+            "image": "nginx"}]
     p_client.update(workload, containers=con)
     wait_for_pod_images(p_client, workload, ns.name, "nginx", 2)
     wait_for_pods_in_workload(p_client, workload, 2)
@@ -116,7 +116,7 @@ def test_wl_upgrade():
             secondrevision = revision.id
 
     con = [{"name": "test1",
-           "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_CLIENT_IMAGE}]
     p_client.update(workload, containers=con)
     wait_for_pod_images(p_client, workload, ns.name, TEST_CLIENT_IMAGE, 2)
     wait_for_pods_in_workload(p_client, workload, 2)
@@ -151,13 +151,13 @@ def test_wl_pod_scale_up():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+            "image": "sangeetha/testclient"}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
                                         namespaceId=ns.id)
     workload = wait_for_wl_to_active(p_client, workload)
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns.name
     allpods = execute_kubectl_cmd(get_pods)
@@ -167,7 +167,7 @@ def test_wl_pod_scale_up():
     validate_workload(p_client, workload, "deployment", ns.name, 2)
     validate_pods_are_running_by_id(allpods, workload, ns.name)
 
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     allpods = execute_kubectl_cmd(get_pods)
     wait_for_pods_in_workload(p_client, workload, 2)
@@ -180,7 +180,7 @@ def test_wl_pod_scale_down():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+            "image": "sangeetha/testclient"}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -191,7 +191,7 @@ def test_wl_pod_scale_down():
 
     p_client.update(workload, scale=2, containers=con)
     wait_for_pods_in_workload(p_client, workload, 2)
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns.name
     allpods = execute_kubectl_cmd(get_pods)
@@ -200,7 +200,7 @@ def test_wl_pod_scale_down():
 
     p_client.update(workload, scale=1, containers=con)
     wait_for_pods_in_workload(p_client, workload, 1)
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     allpods = execute_kubectl_cmd(get_pods)
     validate_workload(p_client, workload, "deployment", ns.name)
@@ -211,7 +211,7 @@ def test_wl_pause_orchestration():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": "sangeetha/testclient"}]
+            "image": "sangeetha/testclient"}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -222,7 +222,7 @@ def test_wl_pause_orchestration():
     p_client.action(workload, "pause")
     validate_workload_paused(p_client, workload, True)
     con = [{"name": "test1",
-           "image": "nginx"}]
+            "image": "nginx"}]
     p_client.update(workload, containers=con)
     validate_pod_images("sangeetha/testclient", workload, ns.name)
     p_client.action(workload, "resume")

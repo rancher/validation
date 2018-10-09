@@ -1,12 +1,12 @@
-import random
-import time
 import inspect
-import os
-import cattle
-import subprocess
 import json
-import paramiko
+import os
+import random
+import subprocess
+import time
 
+import paramiko
+import rancher
 
 DEFAULT_TIMEOUT = 120
 
@@ -17,7 +17,7 @@ CATTLE_API_URL = CATTLE_TEST_URL + "/v3"
 
 kube_fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "k8s_kube_config")
-MACHINE_TIMEOUT = os.environ.get('MACHINE_TIMEOUT', "1200")
+MACHINE_TIMEOUT = float(os.environ.get('MACHINE_TIMEOUT', "1200"))
 
 TEST_CLIENT_IMAGE = "sangeetha/testclient"
 TEST_TARGET_IMAGE = "sangeetha/testnewhostrouting"
@@ -41,28 +41,28 @@ def random_test_name(name="test"):
 
 
 def get_admin_client():
-    return cattle.Client(url=CATTLE_API_URL, token=ADMIN_TOKEN, verify=False)
+    return rancher.Client(url=CATTLE_API_URL, token=ADMIN_TOKEN, verify=False)
 
 
 def get_client_for_token(token):
-    return cattle.Client(url=CATTLE_API_URL, token=token, verify=False)
+    return rancher.Client(url=CATTLE_API_URL, token=token, verify=False)
 
 
 def get_project_client_for_token(project, token):
     p_url = project.links['self'] + '/schemas'
-    p_client = cattle.Client(url=p_url, token=token, verify=False)
+    p_client = rancher.Client(url=p_url, token=token, verify=False)
     return p_client
 
 
 def get_cluster_client_for_token(cluster, token):
     c_url = cluster.links['self'] + '/schemas'
-    c_client = cattle.Client(url=c_url, token=token, verify=False)
+    c_client = rancher.Client(url=c_url, token=token, verify=False)
     return c_client
 
 
 def up(cluster, token):
     c_url = cluster.links['self'] + '/schemas'
-    c_client = cattle.Client(url=c_url, token=token, verify=False)
+    c_client = rancher.Client(url=c_url, token=token, verify=False)
     return c_client
 
 
@@ -121,6 +121,7 @@ def create_project(client, cluster, project_name=None):
         project_name = random_name()
     p = client.create_project(name=project_name,
                               clusterId=cluster.id)
+    time.sleep(5)
     p = client.wait_success(p)
     assert p.state == 'active'
     return p
@@ -190,7 +191,7 @@ def change_member_role_in_project(client, user, prtb, role_template_id):
 
 def create_kubeconfig(cluster):
     generateKubeConfigOutput = cluster.generateKubeconfig()
-    print generateKubeConfigOutput.config
+    print(generateKubeConfigOutput.config)
     file = open(kube_fname, "w")
     file.write(generateKubeConfigOutput.config)
     file.close()
@@ -200,7 +201,7 @@ def validate_psp_error_worklaod(p_client, workload, error_message):
     workload = wait_for_wl_transitioning(p_client, workload)
     assert workload.state == "updating"
     assert workload.transitioning == "error"
-    print workload.transitioningMessage
+    print(workload.transitioningMessage)
     assert error_message in workload.transitioningMessage
 
 
@@ -212,7 +213,7 @@ def validate_workload(p_client, workload, type, ns_name, pod_count=1,
     # scheduled wait time
     if type == "cronJob":
         time.sleep(wait_for_cron_pods)
-    pods = p_client.list_pod(workloadId=workload.id)
+    pods = p_client.list_pod(workloadId=workload.id).data
     assert len(pods) == pod_count
     for pod in pods:
         wait_for_pod_to_running(p_client, pod)
@@ -225,7 +226,7 @@ def validate_workload(p_client, workload, type, ns_name, pod_count=1,
     if type == "cronJob":
         assert len(wl_result["status"]["active"]) >= pod_count
         return
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key+"="+value
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods_result = execute_kubectl_cmd(get_pods)
@@ -246,7 +247,7 @@ def validate_workload_with_sidekicks(p_client, workload, type, ns_name,
     wl_result = execute_kubectl_cmd(
         "get " + type + " " + workload.name + " -n " + ns_name)
     assert wl_result["status"]["readyReplicas"] == pod_count
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key+"="+value
     get_pods = "get pods -l" + label + " -n " + ns_name
     execute_kubectl_cmd(get_pods)
@@ -260,12 +261,12 @@ def validate_workload_with_sidekicks(p_client, workload, type, ns_name,
 
 
 def validate_workload_paused(p_client, workload, expectedstatus):
-    workloadStatus = p_client.list_workload(uuid=workload.uuid)[0].paused
+    workloadStatus = p_client.list_workload(uuid=workload.uuid).data[0].paused
     assert workloadStatus == expectedstatus
 
 
 def validate_pod_images(expectedimage, workload, ns_name):
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods = execute_kubectl_cmd(get_pods)
@@ -275,7 +276,7 @@ def validate_pod_images(expectedimage, workload, ns_name):
 
 
 def validate_pods_are_running_by_id(expectedpods, workload, ns_name):
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods = execute_kubectl_cmd(get_pods)
@@ -289,7 +290,7 @@ def validate_pods_are_running_by_id(expectedpods, workload, ns_name):
 
 
 def validate_workload_image(client, workload, expectedImage, ns):
-    workload = client.list_workload(uuid=workload.uuid)[0]
+    workload = client.list_workload(uuid=workload.uuid).data[0]
     assert workload.containers[0].image == expectedImage
     validate_pod_images(expectedImage, workload, ns.name)
 
@@ -305,12 +306,12 @@ def execute_kubectl_cmd(cmd, json_out=True, stderr=False):
         result = run_command(command)
     if json_out:
         result = json.loads(result)
-    print result
+    print(result)
     return result
 
 
 def run_command(command):
-    return subprocess.check_output(command, shell=True)
+    return subprocess.check_output(command, shell=True, text=True)
 
 
 def run_command_with_stderr(command):
@@ -327,7 +328,7 @@ def run_command_with_stderr(command):
 
 def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
     start = time.time()
-    workloads = client.list_workload(uuid=workload.uuid)
+    workloads = client.list_workload(uuid=workload.uuid).data
     assert len(workloads) == 1
     wl = workloads[0]
     while wl.state != "active":
@@ -335,7 +336,7 @@ def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        workloads = client.list_workload(uuid=workload.uuid)
+        workloads = client.list_workload(uuid=workload.uuid).data
         assert len(workloads) == 1
         wl = workloads[0]
     return wl
@@ -344,7 +345,7 @@ def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
 def wait_for_wl_transitioning(client, workload, timeout=DEFAULT_TIMEOUT,
                               state="error"):
     start = time.time()
-    workloads = client.list_workload(uuid=workload.uuid)
+    workloads = client.list_workload(uuid=workload.uuid).data
     assert len(workloads) == 1
     wl = workloads[0]
     while wl.transitioning != state:
@@ -352,7 +353,7 @@ def wait_for_wl_transitioning(client, workload, timeout=DEFAULT_TIMEOUT,
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        workloads = client.list_workload(uuid=workload.uuid)
+        workloads = client.list_workload(uuid=workload.uuid).data
         assert len(workloads) == 1
         wl = workloads[0]
     return wl
@@ -360,7 +361,7 @@ def wait_for_wl_transitioning(client, workload, timeout=DEFAULT_TIMEOUT,
 
 def wait_for_pod_to_running(client, pod, timeout=DEFAULT_TIMEOUT):
     start = time.time()
-    pods = client.list_pod(uuid=pod.uuid)
+    pods = client.list_pod(uuid=pod.uuid).data
     assert len(pods) == 1
     p = pods[0]
     while p.state != "running":
@@ -368,7 +369,7 @@ def wait_for_pod_to_running(client, pod, timeout=DEFAULT_TIMEOUT):
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        pods = client.list_pod(uuid=pod.uuid)
+        pods = client.list_pod(uuid=pod.uuid).data
         assert len(pods) == 1
         p = pods[0]
     return p
@@ -376,7 +377,7 @@ def wait_for_pod_to_running(client, pod, timeout=DEFAULT_TIMEOUT):
 
 def get_schedulable_nodes(cluster):
     client = get_admin_client()
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     schedulable_nodes = []
     for node in nodes:
         if node.worker:
@@ -390,7 +391,7 @@ def get_role_nodes(cluster, role):
     worker_nodes = []
     node_list = []
     client = get_admin_client()
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     for node in nodes:
         if node.etcd:
             etcd_nodes.append(node)
@@ -418,23 +419,23 @@ def validate_ingress(p_client, cluster, workloads, host, path,
     nodes = get_schedulable_nodes(cluster)
     pods = []
     for workload in workloads:
-        pod_list = p_client.list_pod(workloadId=workload.id)
+        pod_list = p_client.list_pod(workloadId=workload.id).data
         pods.extend(pod_list)
     target_name_list = []
     for pod in pods:
         target_name_list.append(pod.name)
-    print "target name list:" + str(target_name_list)
+    print("target name list:" + str(target_name_list))
     for node in nodes:
         target_hit_list = target_name_list[:]
         host_ip = node.externalIpAddress
-        for i in range(1, 20):
+        for _ in range(1, 20):
             if len(target_hit_list) == 0:
                 break
             cmd = curl_cmd + " http://"+host_ip+path
-            print cmd
+            print(cmd)
             result = run_command(cmd)
             result = result.rstrip()
-            print result
+            print(result)
             assert result in target_name_list
             if result in target_hit_list:
                 target_hit_list.remove(result)
@@ -445,12 +446,12 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
                                     timeout=300):
     pods = []
     for workload in workloads:
-        pod_list = p_client.list_pod(workloadId=workload.id)
+        pod_list = p_client.list_pod(workloadId=workload.id).data
         pods.extend(pod_list)
     target_name_list = []
     for pod in pods:
         target_name_list.append(pod.name)
-    print "target name list:" + str(target_name_list)
+    print("target name list:" + str(target_name_list))
     start = time.time()
     fqdn_available = False
     url = None
@@ -459,7 +460,7 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        ingress_list = p_client.list_ingress(uuid=ingress.uuid)
+        ingress_list = p_client.list_ingress(uuid=ingress.uuid).data
         assert len(ingress_list) == 1
         ingress = ingress_list[0]
         if hasattr(ingress, 'publicEndpoints'):
@@ -469,18 +470,18 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
                     url = \
                         public_endpoint["protocol"].lower() + "://" + \
                         public_endpoint["hostname"]
-                    if "path" in public_endpoint.keys():
+                    if "path" in list(public_endpoint.keys()):
                         url += public_endpoint["path"]
     time.sleep(10)
     target_hit_list = target_name_list[:]
-    for i in range(1, 20):
+    for _ in range(1, 20):
         if len(target_hit_list) == 0:
             break
         cmd = "curl " + url
-        print cmd
+        print(cmd)
         result = run_command(cmd)
         result = result.rstrip()
-        print result
+        print(result)
         assert result in target_name_list
         if result in target_hit_list:
             target_hit_list.remove(result)
@@ -501,7 +502,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
     con = [{"name": "test1",
-           "image": "sangeetha/testnewhostrouting"}]
+            "image": "sangeetha/testnewhostrouting"}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -548,7 +549,7 @@ def validate_dns_record(pod, record, expected):
 
 
 def wait_for_nodes_to_become_active(client, cluster, exception_list=[]):
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     for node in nodes:
         if node.requestedHostname not in exception_list:
             wait_for_node_status(client, node, "active")
@@ -566,35 +567,35 @@ def wait_for_node_status(client, node, state):
 def wait_for_node_to_be_deleted(client, node, timeout=300):
     uuid = node.uuid
     start = time.time()
-    nodes = client.list_node(uuid=uuid)
+    nodes = client.list_node(uuid=uuid).data
     node_count = len(nodes)
     while node_count != 0:
         if time.time() - start > timeout:
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        nodes = client.list_node(uuid=uuid)
+        nodes = client.list_node(uuid=uuid).data
         node_count = len(nodes)
 
 
 def wait_for_cluster_node_count(client, cluster, expected_node_count,
                                 timeout=300):
     start = time.time()
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     node_count = len(nodes)
     while node_count != expected_node_count:
         if time.time() - start > timeout:
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        nodes = client.list_node(clusterId=cluster.id)
+        nodes = client.list_node(clusterId=cluster.id).data
         node_count = len(nodes)
 
 
 def get_custom_host_registration_cmd(client, cluster, roles, node):
     allowed_roles = ["etcd", "worker", "controlplane"]
     cluster_tokens = client.list_cluster_registration_token(
-        clusterId=cluster.id)
+        clusterId=cluster.id).data
     if len(cluster_tokens) > 0:
         cluster_token = cluster_tokens[0]
     else:
@@ -631,17 +632,16 @@ def delete_cluster(client, cluster):
 
 
 def check_connectivity_between_workloads(p_client1, workload1, p_client2,
-                                         workload2,
-                                         allow_connectivity=True):
-    wl1_pods = p_client1.list_pod(workloadId=workload1.id)
-    wl2_pods = p_client2.list_pod(workloadId=workload2.id)
+                                         workload2, allow_connectivity=True):
+    wl1_pods = p_client1.list_pod(workloadId=workload1.id).data
+    wl2_pods = p_client2.list_pod(workloadId=workload2.id).data
     for pod in wl1_pods:
         for o_pod in wl2_pods:
             check_connectivity_between_pods(pod, o_pod, allow_connectivity)
 
 
 def check_connectivity_between_workload_pods(p_client, workload):
-    pods = p_client.list_pod(workloadId=workload.id)
+    pods = p_client.list_pod(workloadId=workload.id).data
     for pod in pods:
         for o_pod in pods:
             check_connectivity_between_pods(pod, o_pod)
@@ -652,7 +652,7 @@ def check_connectivity_between_pods(pod1, pod2, allow_connectivity=True):
 
     cmd = "ping -c 1 -W 1 " + pod_ip
     response = kubectl_pod_exec(pod1, cmd)
-    print "Actual ping Response from " + pod1.name + ":" + str(response)
+    print("Actual ping Response from " + pod1.name + ":" + str(response))
     if allow_connectivity:
         assert pod_ip in str(response) and " 0% packet loss" in str(response)
     else:
@@ -676,7 +676,7 @@ def exec_shell_command(ip, port, cmd, password):
 def wait_for_ns_to_become_active(client, ns, timeout=DEFAULT_TIMEOUT):
     start = time.time()
     time.sleep(2)
-    nss = client.list_namespace(uuid=ns.uuid)
+    nss = client.list_namespace(uuid=ns.uuid).data
     assert len(nss) == 1
     ns = nss[0]
     while ns.state != "active":
@@ -684,7 +684,7 @@ def wait_for_ns_to_become_active(client, ns, timeout=DEFAULT_TIMEOUT):
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        nss = client.list_namespace(uuid=ns.uuid)
+        nss = client.list_namespace(uuid=ns.uuid).data
         assert len(nss) == 1
         ns = nss[0]
     return ns
@@ -694,7 +694,7 @@ def wait_for_pod_images(p_client, workload, ns_name, expectedimage, numofpods,
                         timeout=DEFAULT_TIMEOUT):
     start = time.time()
 
-    for key, value in workload.workloadLabels.iteritems():
+    for key, value in workload.workloadLabels.items():
         label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods = execute_kubectl_cmd(get_pods)
@@ -715,22 +715,22 @@ def wait_for_pod_images(p_client, workload, ns_name, expectedimage, numofpods,
 def wait_for_pods_in_workload(p_client, workload, pod_count,
                               timeout=DEFAULT_TIMEOUT):
     start = time.time()
-    pods = p_client.list_pod(workloadId=workload.id)
+    pods = p_client.list_pod(workloadId=workload.id).data
     while len(pods) != pod_count:
         if time.time() - start > timeout:
             raise AssertionError(
                 "Timed out waiting for state to get to active")
         time.sleep(.5)
-        pods = p_client.list_pod(workloadId=workload.id)
+        pods = p_client.list_pod(workloadId=workload.id).data
     return pods
 
 
 def get_admin_client_and_cluster():
     client = get_admin_client()
     if CLUSTER_NAME == "":
-        clusters = client.list_cluster()
+        clusters = client.list_cluster().data
     else:
-        clusters = client.list_cluster(name=CLUSTER_NAME)
+        clusters = client.list_cluster(name=CLUSTER_NAME).data
     assert len(clusters) > 0
     cluster = clusters[0]
     return client, cluster

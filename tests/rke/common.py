@@ -104,7 +104,8 @@ def assert_containers_exist_for_roles(roles, containers):
 
     # Add extra containers depending on roles present
     if 'controlplane' in roles:
-        expect_containers.extend(['kube-scheduler', 'kube-controller-manager', 'kube-apiserver'])
+        expect_containers.extend(
+            ['kube-scheduler', 'kube-controller-manager', 'kube-apiserver'])
     else:
         expect_containers.extend(['nginx-proxy'])
     if 'etcd' in roles:
@@ -158,9 +159,9 @@ def validation_node_roles(nodes, k8s_nodes):
 
     nodes_to_k8s_nodes = match_nodes(nodes, k8s_nodes)
     for node, k8s_node in nodes_to_k8s_nodes:
-        containers = node.docker_ps().keys()
+        containers = list(node.docker_ps().keys())
         assert_containers_exist_for_roles(node.roles, containers)
-        k8s_node_labels = k8s_node['metadata']['labels'].keys()
+        k8s_node_labels = list(k8s_node['metadata']['labels'].keys())
         for role in node.roles:
             assert role_matcher[role] in k8s_node_labels, \
                 "Expected label '{0}' not in labels: {1}".format(
@@ -316,7 +317,7 @@ class DNSServiceDiscoveryValidation(object):
 
     def setup(self):
 
-        for service_name, service_info in self.services.iteritems():
+        for service_name, service_info in self.services.items():
             # create service
             result = self.kubectl.create_ns(service_info['namespace'])
 
@@ -337,7 +338,7 @@ class DNSServiceDiscoveryValidation(object):
 
         # Get Cluster IP and pod names per service
         dns_records = {}
-        for service_name, service_info in self.services.iteritems():
+        for service_name, service_info in self.services.items():
             # map expected IP to dns service name
             dns = "{0}.{1}.svc.cluster.local".format(
                 service_name, service_info['namespace'])
@@ -352,7 +353,7 @@ class DNSServiceDiscoveryValidation(object):
                 'pods': [p['metadata']['name'] for p in service_pods['items']]
             }
 
-        for dns_record, dns_info in dns_records.iteritems():
+        for dns_record, dns_info in dns_records.items():
             # Check dns resolution
             expected_ip = dns_info['ip']
             cmd = 'dig {0} +short'.format(dns_record)
@@ -373,7 +374,7 @@ class DNSServiceDiscoveryValidation(object):
         self.kubectl.delete_resourse(
             'pod', 'pod-test-util', namespace=self.namespace)
 
-        for service_name, service_info in self.services.iteritems():
+        for service_name, service_info in self.services.items():
             self.kubectl.delete_resourse_from_yml(
                 service_info['yml_file'], namespace=service_info['namespace'])
             self.kubectl.delete_resourse(
@@ -389,7 +390,7 @@ def validate_k8s_service_images(nodes, expected_images):
     """
     for node in nodes:
         containers = node.docker_ps()
-        for service, service_info in expected_images.iteritems():
+        for service, service_info in expected_images.items():
             if service in containers:
                 assert service_info['image'] == containers[service], (
                     "Kubernetes service '{0}' does not match config version "
@@ -418,7 +419,7 @@ def validate_remove_cluster(nodes):
     for node in nodes:
         containers = node.docker_ps()
         for service in k8s_services:
-            assert service not in containers.keys(), (
+            assert service not in list(containers.keys()), (
                 "Found kubernetes service '{0}' still running on node '{1}'"
                 .format(service, node.node_name))
 

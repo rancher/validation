@@ -1,6 +1,11 @@
-from common import *   # NOQA
-from lib.aws import AmazonWebServices
+import os
+
+import rancher
 import requests
+
+from lib.aws import AmazonWebServices
+
+from .common import *  # NOQA
 
 AGENT_REG_CMD = os.environ.get('RANCHER_AGENT_REG_CMD', "")
 HOST_COUNT = int(os.environ.get('RANCHER_HOST_COUNT', 1))
@@ -35,7 +40,7 @@ def test_deploy_rancher_server():
     aws_nodes[0].execute_command(RANCHER_SERVER_CMD)
     time.sleep(120)
     RANCHER_SERVER_URL = "https://" + aws_nodes[0].public_ip_address
-    print RANCHER_SERVER_URL
+    print(RANCHER_SERVER_URL)
     wait_until_active(RANCHER_SERVER_URL)
     token = get_admin_token(RANCHER_SERVER_URL)
     aws_nodes = \
@@ -43,8 +48,8 @@ def test_deploy_rancher_server():
             5, random_test_name("testcustom"))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
-    client = cattle.Client(url=RANCHER_SERVER_URL+"/v3",
-                           token=token, verify=False)
+    client = rancher.Client(url=RANCHER_SERVER_URL+"/v3",
+                            token=token, verify=False)
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
@@ -73,17 +78,17 @@ def get_admin_token(RANCHER_SERVER_URL):
         'password': 'admin',
         'responseType': 'json',
     }, verify=False)
-    print r.json()
+    print(r.json())
     token = r.json()['token']
-    print token
+    print(token)
     # Change admin password
-    client = cattle.Client(url=RANCHER_SERVER_URL+"/v3",
-                           token=token, verify=False)
-    admin_user = client.list_user(username="admin")
+    client = rancher.Client(url=RANCHER_SERVER_URL+"/v3",
+                            token=token, verify=False)
+    admin_user = client.list_user(username="admin").data
     admin_user[0].setpassword(newPassword=ADMIN_PASSWORD)
 
     # Set server-url settings
-    serverurl = client.list_setting(name="server-url")
+    serverurl = client.list_setting(name="server-url").data
     client.update(serverurl[0], value=RANCHER_SERVER_URL)
     return token
 
@@ -92,7 +97,7 @@ def wait_until_active(rancher_url, timeout=120):
     start = time.time()
     while check_for_no_access(rancher_url):
         time.sleep(.5)
-        print "No access yet"
+        print("No access yet")
         if time.time() - start > timeout:
             raise Exception('Timed out waiting for Rancher server '
                             'to become active')

@@ -1,8 +1,11 @@
-from common import *   # NOQA
-from lib.aws import AmazonWebServices
-import pytest
+import os
 from threading import Thread
 
+import pytest
+
+from lib.aws import AmazonWebServices
+
+from .common import *  # NOQA
 
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -594,14 +597,14 @@ def validate_rke_dm_host_4(node_template,
     cluster, node_pools = create_and_vaildate_cluster(
         client, nodes, rancherKubernetesEngineConfig)
     assert len(cluster.nodes()) == 1
-    node1 = cluster.nodes()[0]
+    node1 = cluster.nodes().data[0]
     assert len(node_pools) == 1
     node_pool = node_pools[0]
 
     # Increase the scale of the node pool to 3
     node_pool = client.update(node_pool, quantity=3)
     cluster = validate_cluster(client, cluster, intermediate_state="updating")
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     assert len(nodes) == 3
 
     # Delete node1
@@ -609,7 +612,7 @@ def validate_rke_dm_host_4(node_template,
     wait_for_node_to_be_deleted(client, node1)
 
     cluster = validate_cluster(client, cluster, intermediate_state="updating")
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     assert len(nodes) == 3
     if RANCHER_CLEANUP_CLUSTER == "True":
         delete_cluster(client, cluster)
@@ -628,7 +631,7 @@ def create_and_vaildate_cluster(client, nodes,
         node_pools.append(node_pool)
 
     cluster = validate_cluster(client, cluster)
-    nodes = client.list_node(clusterId=cluster.id)
+    nodes = client.list_node(clusterId=cluster.id).data
     assert len(nodes) == len(nodes)
     for node in nodes:
         assert node.state == "active"

@@ -1,8 +1,23 @@
-from common import *   # NOQA
 import pytest
 import requests
-from cattle import ApiError
+from rancher import ApiError, Client
 
+from .common import (
+    ADMIN_TOKEN,
+    CATTLE_TEST_URL,
+    assign_members_to_cluster,
+    assign_members_to_project,
+    change_member_role_in_cluster,
+    change_member_role_in_project,
+    create_ns,
+    create_project,
+    create_project_and_ns,
+    get_admin_client,
+    get_admin_client_and_cluster,
+    get_client_for_token,
+    get_cluster_client_for_token,
+    random_name,
+)
 
 CATTLE_API_URL = CATTLE_TEST_URL + "/v3"
 CATTLE_AUTH_URL = \
@@ -16,7 +31,7 @@ def test_rbac_cluster_owner():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin , add user1 as cluster member of this cluster
@@ -31,7 +46,7 @@ def test_rbac_cluster_member():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # Add user1 as cluster member of this cluster
@@ -49,7 +64,7 @@ def test_rbac_project_owner():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin user, Add user1 as project member of this project
@@ -69,7 +84,7 @@ def test_rbac_project_member():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin user, Add user1 as project member of this project
@@ -85,7 +100,7 @@ def test_rbac_change_cluster_owner_to_cluster_member():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin , add user1 as cluster member of this cluster
@@ -105,7 +120,7 @@ def test_rbac_change_cluster_member_to_cluster_owner():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # Add user1 as cluster member of this cluster
@@ -127,7 +142,7 @@ def test_rbac_change_project_owner_to_project_member():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin user, Add user1 as project member of this project
@@ -150,7 +165,7 @@ def test_rbac_change_project_member_to_project_cluster():
 
     # Assert that user1 is not able to list cluster
     user1_client = get_client_for_token(user1_token)
-    clusters = user1_client.list_cluster()
+    clusters = user1_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 0
 
     # As admin user, Add user1 as project member of this project
@@ -169,20 +184,22 @@ def validate_cluster_owner(user_token, cluster):
 
     # Assert that user1 is able to see cluster
     user_client = get_client_for_token(user_token)
-    clusters = user_client.list_cluster()
+    clusters = user_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 1
 
     # Assert that user1 is allowed to assign member to the cluster
     assign_members_to_cluster(user_client, user2, cluster, "cluster-member")
 
     # Assert that user1 is able to see projects he does not own
-    project = user_client.list_project(name=a_p.name)
+    project = user_client.list_project(  # pylint: disable=no-member
+        name=a_p.name).data
     assert len(project) == 1
 
     # Assert that user1 is able to see namespaces that are in projects
     # that he does not own
     user_c_client = get_cluster_client_for_token(cluster, user_token)
-    ns = user_c_client.list_namespace(uuid=a_ns.uuid)
+    ns = user_c_client.list_namespace(  # pylint: disable=no-member
+        uuid=a_ns.uuid).data
     assert len(ns) == 1
 
     # Assert that user1 is able to create namespaces in the projects
@@ -200,7 +217,8 @@ def validate_cluster_member(user_token, cluster):
 
     # Assert that user1 is able to see cluster
     user_client = get_client_for_token(user_token)
-    clusters = user_client.list_cluster(name=cluster.name)
+    clusters = user_client.list_cluster(  # pylint: disable=no-member
+        name=cluster.name).data
     assert len(clusters) == 1
     assert clusters[0].name == cluster.name
 
@@ -212,7 +230,8 @@ def validate_cluster_member(user_token, cluster):
     assert e.value.error.code == 'Forbidden'
 
     # Assert that user1 is NOT able to see projects he does not own
-    project = user_client.list_project(name=a_p.name)
+    project = user_client.list_project(  # pylint: disable=no-member
+        name=a_p.name).data
     assert len(project) == 0
 
     """
@@ -222,7 +241,6 @@ def validate_cluster_member(user_token, cluster):
     assert e.value.error.status == 403
     assert e.value.error.code == 'Forbidden'
     """
-
     # Assert that user1 is able create projects and namespace in that project
     create_project_and_ns(user_token, cluster)
 
@@ -232,7 +250,8 @@ def validate_project_owner(user_token, cluster, project, namespace):
 
     # Assert that user1 is now able to see cluster
     user_client = get_client_for_token(user_token)
-    clusters = user_client.list_cluster(name=cluster.name)
+    clusters = user_client.list_cluster(  # pylint: disable=no-member
+        name=cluster.name).data
     assert len(clusters) == 1
     assert clusters[0].name == cluster.name
 
@@ -244,14 +263,16 @@ def validate_project_owner(user_token, cluster, project, namespace):
     assert e.value.error.code == 'Forbidden'
 
     # Assert that user1 is able to see projects he is made the owner of
-    projects = user_client.list_project(name=project.name)
+    projects = user_client.list_project(  # pylint: disable=no-member
+        name=project.name).data
     assert len(projects) == 1
 
     # Assert that user1 is able to access this project
     p_user_client = get_cluster_client_for_token(cluster, user_token)
 
     # Assert that user1 is able to see the existing namespace in this project
-    nss = p_user_client.list_namespace(uuid=namespace.uuid)
+    nss = p_user_client.list_namespace(  # pylint: disable=no-member
+        uuid=namespace.uuid).data
     assert len(nss) == 1
 
     # Assert that user1 is able to access this project
@@ -270,9 +291,9 @@ def validate_project_owner(user_token, cluster, project, namespace):
 def validate_project_member(user_token, cluster, project, namespace):
     user2, user2_token = create_user(get_admin_client())
     # Assert that user1 is able to see cluster
-    user_client = cattle.Client(url=CATTLE_API_URL, token=user_token,
-                                verify=False)
-    clusters = user_client.list_cluster()
+    user_client = Client(url=CATTLE_API_URL, token=user_token,
+                         verify=False)
+    clusters = user_client.list_cluster().data  # pylint: disable=no-member
     assert len(clusters) == 1
     assert clusters[0].name == cluster.name
 
@@ -284,14 +305,16 @@ def validate_project_member(user_token, cluster, project, namespace):
     assert e.value.error.code == 'Forbidden'
 
     # Assert that user1 is able to see projects he is made member of
-    projects = user_client.list_project(name=project.name)
+    projects = user_client.list_project(  # pylint: disable=no-member
+        name=project.name).data
     assert len(projects) == 1
 
     # Assert that user1 is able to access this project
     p_user_client = get_cluster_client_for_token(cluster, user_token)
 
     # Assert that user1 is able to see the existing namespace in this project
-    nss = p_user_client.list_namespace(uuid=namespace.uuid)
+    nss = p_user_client.list_namespace(  # pylint: disable=no-member
+        uuid=namespace.uuid).data
     assert len(nss) == 1
 
     # Assert that user1 is able create namespace in this project
@@ -317,7 +340,7 @@ def get_user_token(user):
         'password': user_password,
         'responseType': 'json',
     }, verify=False)
-    print r.json()
+    print(r.json())
     return r.json()["token"]
 
 

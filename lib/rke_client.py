@@ -27,14 +27,14 @@ class RKEClient(object):
         self._hide = False if DEBUG.lower() == 'true' else True
 
     def _run(self, command):
-        print 'Running command: {}'.format(command)
+        print('Running command: {}'.format(command))
         start_time = time.time()
         result = run(
             'cd {0} && {1}'.format(self._working_dir, command),
             warn=True, hide=self._hide)
         end_time = time.time()
-        print 'Run time for command {0}: {1} seconds'.format(
-            command, end_time - start_time)
+        print('Run time for command {0}: {1} seconds'.format(
+            command, end_time - start_time))
         return result
 
     def up(self, config_yml, config=None):
@@ -43,8 +43,8 @@ class RKEClient(object):
         cli_args = '' if config is None else ' --config {0}'.format(config)
         result = self._run("rke up {0}".format(cli_args))
         if result.ok:
-            print "RKE kube_config:\n{0}".format(
-                self.get_kube_config_for_config())
+            print("RKE kube_config:\n{0}".format(
+                self.get_kube_config_for_config()))
         return result
 
     def remove(self, config=None):
@@ -79,7 +79,7 @@ class RKEClient(object):
         yml_contents = jinja2.Environment(
             loader=jinja2.FileSystemLoader(self.template_path)
         ).get_template(template).render(render_dict)
-        print "Generated cluster.yml contents:\n", yml_contents
+        print("Generated cluster.yml contents:\n", yml_contents)
         nodes = self.update_nodes(yml_contents, nodes)
         return yml_contents, nodes
 

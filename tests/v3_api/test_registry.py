@@ -1,5 +1,8 @@
-from common import *   # NOQA
+import os
+
 import pytest
+
+from .common import *  # NOQA
 
 CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
@@ -41,7 +44,7 @@ def test_delete_registry_all_namespace():
     registry = create_registry_validate_workload(p_client, ns, allns=True)
     delete_registry(p_client, registry, ns)
 
-    print "Verify workloads cannot be created in all the namespaces"
+    print("Verify workloads cannot be created in all the namespaces")
     create_validate_workload_with_invalid_registry(p_client, ns)
     create_validate_workload_with_invalid_registry(p_client, new_ns)
 
@@ -53,7 +56,7 @@ def test_delete_registry_single_namespace():
     registry = create_registry_validate_workload(p_client, ns)
     delete_registry(p_client, registry, ns)
 
-    print "Verify workload cannot be created in the namespace after registry"
+    print("Verify workload cannot be created in the namespace after registry")
     "deletion"
     create_validate_workload_with_invalid_registry(p_client, ns)
 
@@ -75,7 +78,7 @@ def test_edit_registry_single_namespace():
 
     # Update registry with valid username and password
     new_registries = {REGISTRY: {"username": REGISTRY_USER_NAME,
-                      "password": REGISTRY_PASSWORD}}
+                                 "password": REGISTRY_PASSWORD}}
     p_client.update(registry, name=registry.name,
                     namespaceId=ns['name'],
                     registries=new_registries)
@@ -120,21 +123,21 @@ def delete_registry(client, registry, ns):
 
     c_client = namespace["c_client"]
     project = namespace["project"]
-    print "Project ID"
-    print project.id
+    print("Project ID")
+    print(project.id)
     client.delete(registry)
     registryname = registry.name
     # Sleep to allow for the registry to be deleted
     time.sleep(5)
-    print "Registrry list after deleting registry"
-    registrydict = client.list_dockerCredential(name=registryname)
-    print registrydict
+    print("Registry list after deleting registry")
+    registrydict = client.list_dockerCredential(name=registryname).data
+    print(registrydict)
     if len(registrydict) == 0:
         assert True
 
-    namespacedict = c_client.list_namespace(projectId=project.id)
-    print "List of namespaces"
-    print namespacedict
+    namespacedict = c_client.list_namespace(projectId=project.id).data
+    print("List of namespaces")
+    print(namespacedict)
     len_namespace = len(namespacedict)
     namespaceData = namespacedict
 
@@ -143,16 +146,16 @@ def delete_registry(client, registry, ns):
     # for each of the namespaces
     for i in range(0, len_namespace):
         ns_name = namespaceData[i]['name']
-        print i, ns_name
+        print(i, ns_name)
 
         command = " get secret " + registryname + " --namespace=" + ns_name
-        print "Command to obtain the secret"
-        print command
+        print("Command to obtain the secret")
+        print(command)
         result = execute_kubectl_cmd(command, json_out=False, stderr=True)
-        print result
+        print(result)
 
-        print "Verify that the secret does not exist " \
-              "and the error code returned is non zero "
+        print("Verify that the secret does not exist "
+              "and the error code returned is non zero ")
         if result != 0:
             assert True
 
@@ -160,8 +163,8 @@ def delete_registry(client, registry, ns):
 def create_registry_validate_workload(p_client, ns=None, allns=False):
 
     name = random_test_name("registry")
-    print REGISTRY_USER_NAME
-    print REGISTRY_PASSWORD
+    print(REGISTRY_USER_NAME)
+    print(REGISTRY_PASSWORD)
     registries = {REGISTRY: {"username": REGISTRY_USER_NAME,
                              "password": REGISTRY_PASSWORD}}
     if allns:
@@ -204,7 +207,7 @@ def create_validate_workload_with_invalid_registry(p_client, ns):
 
     workload = create_workload(p_client, ns)
     workload = p_client.reload(workload)
-    print "Workload State " + workload.state
+    print("Workload State " + workload.state)
     # Verify that the workload fails to reach active state after the registry
     # update has been made with invalid password
     if workload.state != "active":

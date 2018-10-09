@@ -1,8 +1,11 @@
-from common import *    # NOQA
-import pytest
 import base64
 
+import pytest
+
+from .common import *  # NOQA
+
 CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
+
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
 
@@ -12,15 +15,14 @@ def test_secret_create_all_ns():
     ns = namespace["ns"]
 
     # Value is base64 encoded
-    value = base64.b64encode("valueall")
-    keyvaluepair = {"testall": value}
+    value = base64.b64encode(b"valueall")
+    keyvaluepair = {"testall": value.decode('utf-8')}
     cluster = namespace["cluster"]
     project = namespace["project"]
     c_client = namespace["c_client"]
 
     new_ns = create_ns(c_client, cluster, project)
     namespacelist = [ns, new_ns]
-
     secret = create_secret(keyvaluepair)
 
     # Create workloads with secret in existing namespaces
@@ -52,8 +54,8 @@ def test_secret_create_single_ns():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     # Value is base64 encoded
-    value = base64.b64encode("valueall")
-    keyvaluepair = {"testall": value}
+    value = base64.b64encode(b"valueall")
+    keyvaluepair = {"testall": value.decode('utf-8')}
 
     secret = create_secret(keyvaluepair, singlenamespace=True)
 
@@ -69,8 +71,8 @@ def test_delete_secret_all_ns():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     # Value is base64 encoded
-    value = base64.b64encode("valuealldelete")
-    keyvaluepair = {"testalldelete": value}
+    value = base64.b64encode(b"valuealldelete")
+    keyvaluepair = {"testalldelete": value.decode('utf-8')}
     secret = create_secret(keyvaluepair)
     delete_secret(p_client, secret, ns, keyvaluepair)
 
@@ -80,8 +82,8 @@ def test_delete_secret_single_ns():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     # Value is base64 encoded
-    value = base64.b64encode("valuealldelete")
-    keyvaluepair = {"testalldelete": value}
+    value = base64.b64encode(b"valuealldelete")
+    keyvaluepair = {"testalldelete": value.decode('utf-8')}
 
     secret = create_secret(keyvaluepair, singlenamespace=True)
     delete_secret(p_client, secret, ns, keyvaluepair)
@@ -92,8 +94,8 @@ def test_edit_secret_all_ns():
     p_client = namespace["p_client"]
     name = random_test_name("default")
     # Value is base64 encoded
-    value = base64.b64encode("valueall")
-    keyvaluepair = {"testall": value}
+    value = base64.b64encode(b"valueall")
+    keyvaluepair = {"testall": value.decode('utf-8')}
     cluster = namespace["cluster"]
     project = namespace["project"]
     c_client = namespace["c_client"]
@@ -103,19 +105,20 @@ def test_edit_secret_all_ns():
     secret = create_secret(keyvaluepair)
 
     # Value is base64 encoded
-    value1 = base64.b64encode("valueall")
-    value2 = base64.b64encode("valueallnew")
-    updated_dict = {"testall": value1, "testallnew": value2}
+    value1 = base64.b64encode(b"valueall")
+    value2 = base64.b64encode(b"valueallnew")
+    updated_dict = {"testall": value1.decode(
+        'utf-8'), "testallnew": value2.decode('utf-8')}
     updated_secret = p_client.update(secret, name=name, namespaceId='NULL',
                                      data=updated_dict)
 
     assert updated_secret['baseType'] == "secret"
     updatedsecretdata = updated_secret['data']
 
-    print "UPDATED SECRET DATA"
-    print updatedsecretdata
+    print("UPDATED SECRET DATA")
+    print(updatedsecretdata)
 
-    assert cmp(updatedsecretdata, updated_dict) == 0
+    assert updatedsecretdata.data_dict() == updated_dict
 
     # Create workloads using updated secret in the existing namespace
     create_and_validate_workload_with_secret_as_volume(p_client, secret,
@@ -140,24 +143,25 @@ def test_edit_secret_single_ns():
     ns = namespace["ns"]
     name = random_test_name("default")
     # Value is base64 encoded
-    value = base64.b64encode("valueall")
-    keyvaluepair = {"testall": value}
+    value = base64.b64encode(b"valueall")
+    keyvaluepair = {"testall": value.decode('utf-8')}
 
     secret = create_secret(keyvaluepair, singlenamespace=True)
 
-    value1 = base64.b64encode("valueall")
-    value2 = base64.b64encode("valueallnew")
-    updated_dict = {"testall": value1, "testallnew": value2}
+    value1 = base64.b64encode(b"valueall")
+    value2 = base64.b64encode(b"valueallnew")
+    updated_dict = {"testall": value1.decode(
+        'utf-8'), "testallnew": value2.decode('utf-8')}
     updated_secret = p_client.update(secret, name=name,
                                      namespaceId=ns['name'],
                                      data=updated_dict)
     assert updated_secret['baseType'] == "namespacedSecret"
     updatedsecretdata = updated_secret['data']
 
-    print "UPDATED SECRET DATA"
-    print updatedsecretdata
+    print("UPDATED SECRET DATA")
+    print(updatedsecretdata)
 
-    assert cmp(updatedsecretdata, updated_dict) == 0
+    assert updatedsecretdata.data_dict() == updated_dict
 
     # Create a workload with the updated secret in the existing namespace
     create_and_validate_workload_with_secret_as_volume(p_client, secret,
@@ -169,7 +173,6 @@ def test_edit_secret_single_ns():
 
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
-
     client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
     p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testsecret")
@@ -194,42 +197,42 @@ def validate_workload_with_secret(p_client, workload,
 
     validate_workload(p_client, workload, type, ns_name, pod_count=1)
 
-    pod_list = p_client.list_pod(workloadId=workload.id)
+    pod_list = p_client.list_pod(workloadId=workload.id).data
     mountpath = "/test"
     for i in range(0, len(keyvaluepair)):
-        key = keyvaluepair.keys()[i]
+        key = list(keyvaluepair.keys())[i]
         if workloadwithsecretasVolume:
             key_file_in_pod = mountpath + "/" + key
-            print key_file_in_pod
+            print(key_file_in_pod)
             command = "cat " + key_file_in_pod + ''
-            print " Command to display secret value from container is: "
-            print command
+            print(" Command to display secret value from container is: ")
+            print(command)
             result = kubectl_pod_exec(pod_list[0], command)
-            assert result == base64.b64decode(keyvaluepair.values()[i])
+            assert result == base64.b64decode(list(keyvaluepair.values())[i])
         elif workloadwithsecretasenvvar:
             command = 'env'
             result = kubectl_pod_exec(pod_list[0], command)
-            if base64.b64decode(keyvaluepair.values()[i]) in result:
+            if base64.b64decode(list(keyvaluepair.values())[i]) in result:
                 assert True
 
 
 def delete_secret(client, secret, ns, keyvaluepair):
 
-    key = keyvaluepair.keys()[0]
+    key = list(keyvaluepair.keys())[0]
 
-    print "Delete Secret"
+    print("Delete Secret")
     client.delete(secret)
 
     # Sleep to allow for the secret to be deleted
     time.sleep(5)
-    print "Secret list after deleting secret"
+    print("Secret list after deleting secret")
     secretdict = client.list_secret()
-    print secretdict
-    print secretdict.get('data')
+    print(secretdict)
+    print(secretdict.get('data'))
     if len(secretdict.get('data')) > 0:
         testdata = secretdict.get('data')
-        print "TESTDATA"
-        print testdata[0]['data']
+        print("TESTDATA")
+        print(testdata[0]['data'])
         if key in testdata[0]['data']:
             assert False
         else:
@@ -239,13 +242,13 @@ def delete_secret(client, secret, ns, keyvaluepair):
 
     # Verify secret is deleted by "kubectl get secret" command
     command = " get secret " + secret['name'] + " --namespace=" + ns.name
-    print "Command to obtain the secret"
-    print command
+    print("Command to obtain the secret")
+    print(command)
     result = execute_kubectl_cmd(command, json_out=False, stderr=True)
-    print result
+    print(result)
 
-    print "Verify that the secret does not exist " \
-          "and the error code returned is non zero "
+    print("Verify that the secret does not exist "
+          "and the error code returned is non zero ")
     if result != 0:
         assert True
 
@@ -328,10 +331,10 @@ def create_secret(keyvaluepair, singlenamespace=False,
                                                    data=keyvaluepair)
         assert secret['baseType'] == "namespacedSecret"
 
-    print secret
+    print(secret)
     secretdata = secret['data']
-    print "SECRET DATA"
-    print secretdata
-    assert cmp(secretdata, keyvaluepair) == 0
+    print("SECRET DATA")
+    print(secretdata)
+    assert secretdata.data_dict() == keyvaluepair
 
     return secret

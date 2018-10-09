@@ -1,5 +1,6 @@
-from common import *   # NOQA
 from lib.aws import AmazonWebServices
+
+from .common import *  # NOQA
 
 k8s_version = "v1.10.1-rancher1"
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},

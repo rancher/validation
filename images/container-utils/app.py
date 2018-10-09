@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 
 def generate_random_file_name():
-    name = ''.join(random.choice(ascii_letters + digits) for _ in range(35))
+    name = ''.join(random.choice(ascii_letters + digits) for _ in list(range(35)))
     return "{0}/{1}.txt".format(TEMP_DIR, name)
 
 

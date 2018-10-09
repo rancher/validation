@@ -1,5 +1,6 @@
-from common import *   # NOQA
 import pytest
+
+from .common import *  # NOQA
 
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None}
 
@@ -9,7 +10,7 @@ def test_ingress():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -34,7 +35,7 @@ def test_ingress_with_same_rules_having_multiple_targets():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "testm1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload1 = p_client.create_workload(name=name,
                                          containers=con,
@@ -69,7 +70,7 @@ def test_ingress_edit_target():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload1 = p_client.create_workload(name=name,
                                          containers=con,
@@ -107,7 +108,7 @@ def test_ingress_edit_host():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -139,7 +140,7 @@ def test_ingress_edit_path():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -170,7 +171,7 @@ def test_ingress_edit_add_more_rules():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload1 = p_client.create_workload(name=name,
                                          containers=con,
@@ -210,7 +211,7 @@ def test_ingress_scale_up_target():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-           "image": TEST_TARGET_IMAGE}]
+            "image": TEST_TARGET_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
