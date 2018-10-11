@@ -287,10 +287,6 @@ def test_ingress_rule_with_only_path():
                             rules=[rule])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], "", path, True)
-    validate_ingress(namespace["p_client"], namespace["cluster"],
-                     [workload], "hello.com", path, True)
-    validate_ingress(namespace["p_client"], namespace["cluster"],
-                     [workload], "hello2.com", path, True)
 
 
 def test_ingress_rule_with_only_host():

@@ -4,6 +4,7 @@ import os
 import random
 import subprocess
 import time
+import requests
 
 import paramiko
 import rancher
@@ -411,54 +412,29 @@ def get_role_nodes(cluster, role):
 def validate_ingress(p_client, cluster, workloads, host, path,
                      insecure_redirect=False):
     time.sleep(10)
-    curl_cmd = "curl "
+    curl_args = " "
     if (insecure_redirect):
-        curl_cmd = "curl -L --insecure "
+        curl_args = " -L --insecure "
     if len(host) > 0:
-        curl_cmd += " --header 'Host: "+host+"'"
+        curl_args += " --header 'Host: "+host+"'"
     nodes = get_schedulable_nodes(cluster)
-    pods = []
-    for workload in workloads:
-        pod_list = p_client.list_pod(workloadId=workload.id).data
-        pods.extend(pod_list)
-    target_name_list = []
-    for pod in pods:
-        target_name_list.append(pod.name)
-    print("target name list:" + str(target_name_list))
+    target_name_list = get_target_names(p_client, workloads)
     for node in nodes:
-        target_hit_list = target_name_list[:]
         host_ip = node.externalIpAddress
-        for _ in range(1, 20):
-            if len(target_hit_list) == 0:
-                break
-            cmd = curl_cmd + " http://"+host_ip+path
-            print(cmd)
-            result = run_command(cmd)
-            result = result.rstrip()
-            print(result)
-            assert result in target_name_list
-            if result in target_hit_list:
-                target_hit_list.remove(result)
-        assert len(target_hit_list) == 0
+        cmd = curl_args + " http://" + host_ip + path
+        validate_http_response(cmd, target_name_list)
 
 
 def validate_ingress_using_endpoint(p_client, ingress, workloads,
                                     timeout=300):
-    pods = []
-    for workload in workloads:
-        pod_list = p_client.list_pod(workloadId=workload.id).data
-        pods.extend(pod_list)
-    target_name_list = []
-    for pod in pods:
-        target_name_list.append(pod.name)
-    print("target name list:" + str(target_name_list))
+    target_name_list = get_target_names(p_client, workloads)
     start = time.time()
     fqdn_available = False
     url = None
     while not fqdn_available:
         if time.time() - start > timeout:
             raise AssertionError(
-                "Timed out waiting for state to get to active")
+                "Timed out waiting for endpoint to be available")
         time.sleep(.5)
         ingress_list = p_client.list_ingress(uuid=ingress.uuid).data
         assert len(ingress_list) == 1
@@ -470,17 +446,78 @@ def validate_ingress_using_endpoint(p_client, ingress, workloads,
                     url = \
                         public_endpoint["protocol"].lower() + "://" + \
                         public_endpoint["hostname"]
-                    if "path" in list(public_endpoint.keys()):
+                    if "path" in public_endpoint.keys():
                         url += public_endpoint["path"]
     time.sleep(10)
+    validate_http_response(url, target_name_list)
+
+
+def get_target_names(p_client, workloads):
+    pods = []
+    for workload in workloads:
+        pod_list = p_client.list_pod(workloadId=workload.id).data
+        pods.extend(pod_list)
+    target_name_list = []
+    for pod in pods:
+        target_name_list.append(pod.name)
+    print("target name list:" + str(target_name_list))
+    return target_name_list
+
+
+def get_endpoint_url_for_workload(p_client, workload, timeout=600):
+    fqdn_available = False
+    url = ""
+    start = time.time()
+    while not fqdn_available:
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for endpoint to be available")
+        time.sleep(.5)
+        workload_list = p_client.list_workload(uuid=workload.uuid).data
+        assert len(workload_list) == 1
+        workload = workload_list[0]
+        if hasattr(workload, 'publicEndpoints'):
+            assert len(workload.publicEndpoints) > 0
+            url = "http://"
+            url = url + workload.publicEndpoints[0]["addresses"][0] + ":"
+            url = url + str(workload.publicEndpoints[0]["port"])
+            fqdn_available = True
+    return url
+
+
+def wait_until_lb_is_active(url, timeout=300):
+    start = time.time()
+    while check_for_no_access(url):
+        time.sleep(.5)
+        print("No access yet")
+        if time.time() - start > timeout:
+            raise Exception('Timed out waiting for LB to become active')
+    return
+
+
+def check_for_no_access(url):
+    try:
+        requests.get(url)
+        return False
+    except requests.ConnectionError:
+        print("Connection Error - " + url)
+        return True
+
+
+def validate_http_response(cmd, target_name_list, client_pod=None):
     target_hit_list = target_name_list[:]
-    for _ in range(1, 20):
+    for i in range(1, 20):
         if len(target_hit_list) == 0:
             break
-        cmd = "curl " + url
-        print(cmd)
-        result = run_command(cmd)
+        if client_pod is None:
+            curl_cmd = "curl " + cmd
+            result = run_command(curl_cmd)
+        else:
+            wget_cmd = "wget -qO- " + cmd
+            result = kubectl_pod_exec(client_pod, wget_cmd)
+            result = result.decode()
         result = result.rstrip()
+        print(cmd)
         print(result)
         assert result in target_name_list
         if result in target_hit_list:
@@ -499,6 +536,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     # Create Daemon set workload and have an Ingress with Workload
     # rule pointing to this daemonset
     create_kubeconfig(cluster)
+    check_cluster_state(len(get_role_nodes(cluster, "etcd")))
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
     con = [{"name": "test1",
@@ -524,11 +562,31 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     return cluster
 
 
+def check_cluster_state(etcd_count):
+    css_resp = execute_kubectl_cmd("get cs")
+    css = css_resp["items"]
+    components = ["scheduler", "controller-manager"]
+    for i in range(0, etcd_count):
+        components.append("etcd-" + str(i))
+    print("components to check - " + str(components))
+    for cs in css:
+        component_name = cs["metadata"]["name"]
+        assert component_name in components
+        components.remove(component_name)
+        assert cs["conditions"][0]["status"] == "True"
+        assert cs["conditions"][0]["type"] == "Healthy"
+    assert len(components) == 0
+
+
 def validate_dns_record(pod, record, expected):
     # requires pod with `dig` available (sangeetha/testclient)
     host = '{0}.{1}.svc.cluster.local'.format(
         record["name"], record["namespaceId"])
+    validate_dns_entry(pod, host, expected)
 
+
+def validate_dns_entry(pod, host, expected):
+    # requires pod with `dig` available (sangeetha/testclient)
     cmd = 'ping -c 1 -W 1 {0}'.format(host)
     ping_output = kubectl_pod_exec(pod, cmd)
 
@@ -539,7 +597,7 @@ def validate_dns_record(pod, record, expected):
             break
 
     assert ping_validation_pass is True
-    assert "0% packet loss" in str(ping_output)
+    assert " 0% packet loss" in str(ping_output)
 
     dig_cmd = 'dig {0} +short'.format(host)
     dig_output = kubectl_pod_exec(pod, dig_cmd)

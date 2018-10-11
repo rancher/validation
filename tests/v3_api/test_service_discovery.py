@@ -21,7 +21,7 @@ def test_dns_record_type_external_ip():
 
 def test_dns_record_type_multiple_external_ips():
     ns = namespace["ns"]
-    record = {"type": "dnsRecord", "ipAddresses": ["8.8.8.8", "4.4.4.4"],
+    record = {"type": "dnsRecord", "ipAddresses": ["8.8.8.8", "8.8.4.4"],
               "name": random_test_name("record"), "namespaceId": ns.id}
     expected = record["ipAddresses"]
     create_and_validate_dns_record(record, expected)
