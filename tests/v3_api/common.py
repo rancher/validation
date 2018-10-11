@@ -536,7 +536,8 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     # Create Daemon set workload and have an Ingress with Workload
     # rule pointing to this daemonset
     create_kubeconfig(cluster)
-    check_cluster_state(len(get_role_nodes(cluster, "etcd")))
+    if hasattr(cluster, 'rancherKubernetesEngineConfig'):
+        check_cluster_state(len(get_role_nodes(cluster, "etcd")))
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
     con = [{"name": "test1",
