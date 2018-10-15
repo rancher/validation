@@ -8,6 +8,7 @@ import requests
 
 import paramiko
 import rancher
+from rancher import ApiError
 
 DEFAULT_TIMEOUT = 120
 
@@ -123,7 +124,7 @@ def create_project(client, cluster, project_name=None):
     p = client.create_project(name=project_name,
                               clusterId=cluster.id)
     time.sleep(5)
-    p = client.wait_success(p)
+    p = wait_until_available(client, p)
     assert p.state == 'active'
     return p
 
@@ -131,14 +132,14 @@ def create_project(client, cluster, project_name=None):
 def create_project_with_pspt(client, cluster, pspt):
     p = client.create_project(name=random_name(),
                               clusterId=cluster.id)
-    p = client.wait_success(p)
+    p = wait_until_available(client, p)
     assert p.state == 'active'
     return set_pspt_for_project(p, client, pspt)
 
 
 def set_pspt_for_project(project, client, pspt):
     project.setpodsecuritypolicytemplate(podSecurityPolicyTemplateId=pspt.id)
-    project = client.wait_success(project)
+    project = wait_until_available(client, project)
     assert project.state == 'active'
     return project
 
@@ -149,7 +150,6 @@ def create_ns(client, cluster, project, ns_name=None):
     ns = client.create_namespace(name=ns_name,
                                  clusterId=cluster.id,
                                  projectId=project.id)
-    # ns = wait_state(client, ns, "state", "active")
     wait_for_ns_to_become_active(client, ns)
     ns = client.reload(ns)
     assert ns.state == 'active'
@@ -814,3 +814,25 @@ def validate_cluster_state(client, cluster,
     assert cluster.state == "active"
     wait_for_nodes_to_become_active(client, cluster,
                                     exception_list=nodes_not_in_active_state)
+
+
+def wait_until_available(client, obj, timeout=DEFAULT_TIMEOUT):
+    start = time.time()
+    sleep = 0.01
+    while True:
+        time.sleep(sleep)
+        sleep *= 2
+        if sleep > 2:
+            sleep = 2
+        try:
+            obj = client.reload(obj)
+        except ApiError as e:
+            if e.error.status != 403:
+                raise e
+        else:
+            return obj
+        delta = time.time() - start
+        if delta > timeout:
+            msg = 'Timeout waiting for [{}:{}] for condition after {}' \
+                  ' seconds'.format(obj.type, obj.id, delta)
+            raise Exception(msg)
