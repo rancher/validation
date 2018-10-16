@@ -1,5 +1,5 @@
 import base64
-
+import ast
 import pytest
 
 from .common import *  # NOQA
@@ -16,6 +16,8 @@ cluster_details = {}
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None,
              "testclient_pods": []}
 upgrade_check_stage = os.environ.get('RANCHER_UPGRADE_CHECK', "preupgrade")
+validate_ingress = \
+    ast.literal_eval(os.environ.get('RANCHER_INGRESS_CHECK', "True"))
 
 wl_name = "-testwl"
 sd_name = "-testsd"
@@ -51,13 +53,17 @@ ingress_wlname2_validate = validate_prefix + ingress_wlname2
 if_post_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "postupgrade",
     reason='This test is not executed for PreUpgrade checks')
+if_pre_upgrade = pytest.mark.skipif(
+    upgrade_check_stage != "preupgrade",
+    reason='This test is not executed for PreUpgrade checks')
 
 
+@if_pre_upgrade
 def test_upgrade_create_and_validate_resources():
-    if upgrade_check_stage == "preupgrade":
-        create_and_validate_wl()
-        create_and_validate_service_discovery()
-        create_wokloads_with_secret()
+    create_and_validate_wl()
+    create_and_validate_service_discovery()
+    create_wokloads_with_secret()
+    if validate_ingress:
         create_and_validate_ingress_xip_io()
 
 
@@ -67,16 +73,18 @@ def test_upgrade_validate_resources():
     validate_wl(wl_name_validate)
     validate_service_discovery(sd_name_validate,
                                [sd_wlname1_validate, sd_wlname2_validate])
-    validate_ingress_xip_io(ingress_name1_validate,
-                            ingress_wlname1_validate)
-    validate_ingress_xip_io(ingress_name2_validate,
-                            ingress_wlname2_validate)
+    if validate_ingress:
+        validate_ingress_xip_io(ingress_name1_validate,
+                                ingress_wlname1_validate)
+        validate_ingress_xip_io(ingress_name2_validate,
+                                ingress_wlname2_validate)
     # Create and validate new resources
     create_project_resources()
     create_and_validate_wl()
     create_and_validate_service_discovery()
     create_wokloads_with_secret()
-    create_and_validate_ingress_xip_io()
+    if validate_ingress:
+        create_and_validate_ingress_xip_io()
 
 
 def create_and_validate_wl():
@@ -93,7 +101,7 @@ def validate_wl(workload_name):
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     workloads = p_client.list_workload(name=workload_name,
-                                       namespaceId=ns.id)
+                                       namespaceId=ns.id).data
     assert len(workloads) == 1
     workload = workloads[0]
     validate_workload(p_client, workload, "deployment", ns.name, pod_count=2)
@@ -142,11 +150,11 @@ def validate_ingress_xip_io(ing_name, workload_name):
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     workloads = p_client.list_workload(name=workload_name,
-                                       namespaceId=ns.id)
+                                       namespaceId=ns.id).data
     assert len(workloads) == 1
     workload = workloads[0]
     ingresses = p_client.list_ingress(name=ing_name,
-                                      namespaceId=ns.id)
+                                      namespaceId=ns.id).data
     assert len(ingresses) == 1
     ingress = ingresses[0]
 
@@ -191,19 +199,20 @@ def validate_service_discovery(sd_record_name, workload_names):
     target_wls = []
     for wl_name_create in workload_names:
         workloads = p_client.list_workload(
-            name=wl_name_create, namespaceId=ns.id)
+            name=wl_name_create, namespaceId=ns.id).data
         assert len(workloads) == 1
         workload = workloads[0]
         target_wls.append(workload)
 
-    records = p_client.list_dns_record(name=sd_record_name, namespaceId=ns.id)
+    records = p_client.list_dns_record(
+        name=sd_record_name, namespaceId=ns.id).data
     assert len(records) == 1
     record = records[0]
 
     testclient_pods = namespace["testclient_pods"]
     expected_ips = []
     for wl in target_wls:
-        pods = p_client.list_pod(workloadId=wl["id"])
+        pods = p_client.list_pod(workloadId=wl["id"]).data
         for pod in pods:
             expected_ips.append(pod["status"]["podIp"])
 
@@ -213,8 +222,8 @@ def validate_service_discovery(sd_record_name, workload_names):
 
 
 def create_wokloads_with_secret():
-    value = base64.b64encode("valueall")
-    keyvaluepair = {"testall": value}
+    value = base64.b64encode(b"valueall")
+    keyvaluepair = {"testall": value.decode('utf-8')}
 
     p_client = namespace["p_client"]
     ns = namespace["ns"]
@@ -239,7 +248,7 @@ def create_wokloads_with_secret():
 @pytest.fixture(scope='module', autouse="True")
 def create_project_client(request):
     client = get_admin_client()
-    clusters = client.list_cluster(name=cluster_name)
+    clusters = client.list_cluster(name=cluster_name).data
     assert len(clusters) == 1
     cluster = clusters[0]
     create_kubeconfig(cluster)
@@ -305,7 +314,7 @@ def validate_existing_project_resources():
     # Get existing project
     client = get_admin_client()
     projects = client.list_project(name=p_name,
-                                   clusterId=cluster.id)
+                                   clusterId=cluster.id).data
     assert len(projects) == 1
     project = projects[0]
 
@@ -313,29 +322,29 @@ def validate_existing_project_resources():
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
 
     # Get existing namespace
-    nss = c_client.list_namespace(name=ns_name)
+    nss = c_client.list_namespace(name=ns_name).data
     assert len(nss) == 1
     ns = nss[0]
 
     # 2nd namespace
-    nss = c_client.list_namespace(name=ns2_name)
+    nss = c_client.list_namespace(name=ns2_name).data
     assert len(nss) == 1
     ns2 = nss[0]
 
     # Get existing SD client pods
     workload_name = validate_prefix + "-testsdclient"
     workloads = p_client.list_workload(name=workload_name,
-                                       namespaceId=ns.id)
+                                       namespaceId=ns.id).data
     assert len(workloads) == 1
-    wl1_pods = p_client.list_pod(workloadId=workloads[0].id)
+    wl1_pods = p_client.list_pod(workloadId=workloads[0].id).data
     assert len(wl1_pods) == 1
 
     workload_name = validate_prefix + "-testsdclient"
 
     workloads = p_client.list_workload(name=workload_name,
-                                       namespaceId=ns2.id)
+                                       namespaceId=ns2.id).data
     assert len(workloads) == 1
-    wl2_pods = p_client.list_pod(workloadId=workloads[0].id)
+    wl2_pods = p_client.list_pod(workloadId=workloads[0].id).data
     assert len(wl2_pods) == 1
 
     namespace["p_client"] = p_client
