@@ -70,6 +70,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
                     jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }
                     jobs["ec2"] = { build job: 'v3_test_ec2_cluster', parameters: params }
                     jobs["az"] = { build job: 'v3_test_az_cluster', parameters: params }
+                    jobs["eks_gke_aks"] = { build job: 'v3_test_gke_eks_aks_clusters', parameters: params }
 
                     parallel jobs
                 }
