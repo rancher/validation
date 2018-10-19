@@ -19,7 +19,7 @@ CATTLE_API_URL = CATTLE_TEST_URL + "/v3"
 
 kube_fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "k8s_kube_config")
-MACHINE_TIMEOUT = float(os.environ.get('MACHINE_TIMEOUT', "1200"))
+MACHINE_TIMEOUT = float(os.environ.get('RANCHER_MACHINE_TIMEOUT', "1200"))
 
 TEST_CLIENT_IMAGE = "sangeetha/testclient"
 TEST_TARGET_IMAGE = "sangeetha/testnewhostrouting"
