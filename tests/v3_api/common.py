@@ -5,10 +5,11 @@ import random
 import subprocess
 import time
 import requests
-
+import ast
 import paramiko
 import rancher
 from rancher import ApiError
+from lib.aws import AmazonWebServices
 
 DEFAULT_TIMEOUT = 120
 
@@ -24,6 +25,11 @@ MACHINE_TIMEOUT = float(os.environ.get('RANCHER_MACHINE_TIMEOUT', "1200"))
 TEST_CLIENT_IMAGE = "sangeetha/testclient"
 TEST_TARGET_IMAGE = "sangeetha/testnewhostrouting"
 CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
+RANCHER_CLEANUP_CLUSTER = \
+    ast.literal_eval(os.environ.get('RANCHER_CLEANUP_CLUSTER', "True"))
+env_file = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    "rancher_env.config")
 
 
 def random_str():
@@ -836,3 +842,26 @@ def wait_until_available(client, obj, timeout=DEFAULT_TIMEOUT):
             msg = 'Timeout waiting for [{}:{}] for condition after {}' \
                   ' seconds'.format(obj.type, obj.id, delta)
             raise Exception(msg)
+
+
+def delete_node(aws_nodes):
+    for node in aws_nodes:
+        AmazonWebServices().delete_node(node)
+
+
+def cluster_cleanup(client, cluster, aws_nodes=None):
+    if RANCHER_CLEANUP_CLUSTER:
+        delete_cluster(client, cluster)
+        if aws_nodes is not None:
+            delete_node(aws_nodes)
+    else:
+        env_details = "env.CATTLE_TEST_URL='" + CATTLE_TEST_URL + "'\n"
+        env_details += "env.ADMIN_TOKEN='" + ADMIN_TOKEN + "'\n"
+        env_details += "env.CLUSTER_NAME='" + cluster.name + "'\n"
+        create_config_file(env_details)
+
+
+def create_config_file(env_details):
+        file = open(env_file, "w")
+        file.write(env_details)
+        file.close()

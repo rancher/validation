@@ -1,7 +1,6 @@
 from .common import *  # NOQA
 import pytest
 
-RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 EKS_ACCESS_KEY = os.environ.get('RANCHER_EKS_ACCESS_KEY', "")
 EKS_SECRET_KEY = os.environ.get('RANCHER_EKS_SECRET_KEY', "")
 EKS_AMI = os.environ.get('RANCHER_EKS_AMI', "")
@@ -24,8 +23,7 @@ def test_create_eks_cluster():
     cluster = validate_cluster(client, cluster, check_intermediate_state=True,
                                skipIngresscheck=True)
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def get_eks_config():

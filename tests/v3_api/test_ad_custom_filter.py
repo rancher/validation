@@ -9,19 +9,23 @@ Prerequisite:
 Enable AD without TLS, and using testuser1 as admin user.
 
 Description:
-In this test, we are testing the customized user and group search filter functionalities.
+In this test, we are testing the customized user and group search filter
+functionalities.
 1) For customized user search filter:
-The filter looks like: 
-(&(objectClass=person)(|(sAMAccountName=test*)(sn=test*)(givenName=test*))[user customized filter])
-Here, after we add userSearchFilter = (memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)
-we will filter out only testuser40 and testuser41, otherwise, all users start with search keyword "testuser"
-will be listed out.
+The filter looks like:
+(&(objectClass=person)(|(sAMAccountName=test*)(sn=test*)(givenName=test*))
+[user customized filter])
+Here, after we add
+userSearchFilter = (memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)
+we will filter out only testuser40 and testuser41, otherwise, all users start
+with search keyword "testuser" will be listed out.
 
 2) For customized group search filter:
-The filter looks like: 
+The filter looks like:
 (&(objectClass=group)(sAMAccountName=test)[group customized filter])
 Here, after we add groupSearchFilter = (cn=testgroup2)
-we will filter out only testgroup2, otherwise, all groups has search keyword "testgroup" will be listed out.
+we will filter out only testgroup2, otherwise, all groups has search
+keyword "testgroup" will be listed out.
 '''
 
 # Config Fields
@@ -53,7 +57,9 @@ CATTLE_AUTH_DISABLE_URL = CATTLE_AUTH_PROVIDER_URL + "?action=disable"
 def test_custom_user_and_group_filter_for_AD():
     disable_ad("testuser1", ADMIN_TOKEN)
     enable_ad_with_customized_filter(
-        "testuser1", "(memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)", "", ADMIN_TOKEN)
+        "testuser1",
+        "(memberOf=CN=testgroup5,CN=Users,DC=tad,DC=rancher,DC=io)",
+        "", ADMIN_TOKEN)
     search_ad_users("testuser", ADMIN_TOKEN)
 
     disable_ad("testuser1", ADMIN_TOKEN)
@@ -74,7 +80,9 @@ def disable_ad(username, token, expected_status=200):
           username + " " + str(expected_status))
 
 
-def enable_ad_with_customized_filter(username, usersearchfilter, groupsearchfilter, token, expected_status=200):
+def enable_ad_with_customized_filter(username, usersearchfilter,
+                                     groupsearchfilter, token,
+                                     expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
         "accessMode": "unrestricted",
@@ -129,10 +137,14 @@ def search_ad_users(searchkey, token, expected_status=200):
         print(data)
         assert len(data) == 2
         print(data)
-        assert data[0].get(
-            'id') == "activedirectory_user://CN=test user40,CN=Users,DC=tad,DC=rancher,DC=io"
-        assert data[1].get(
-            'id') == "activedirectory_user://CN=test user41,CN=Users,DC=tad,DC=rancher,DC=io"
+        assert \
+            data[0].get('id') == \
+            "activedirectory_user://CN=test user40," \
+            "CN=Users,DC=tad,DC=rancher,DC=io"
+        assert \
+            data[1].get('id') == \
+            "activedirectory_user://CN=test user41," \
+            "CN=Users,DC=tad,DC=rancher,DC=io"
 
 
 def search_ad_groups(searchkey, token, expected_status=200):
@@ -146,5 +158,7 @@ def search_ad_groups(searchkey, token, expected_status=200):
     if r.status_code == 200:
         data = r.json()['data']
         assert len(data) == 1
-        assert data[0].get(
-            'id') == "activedirectory_group://CN=testgroup2,CN=Users,DC=tad,DC=rancher,DC=io"
+        assert \
+            data[0].get('id') == \
+            "activedirectory_group://CN=testgroup2," \
+            "CN=Users,DC=tad,DC=rancher,DC=io"

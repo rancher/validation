@@ -2,7 +2,6 @@ from .common import *   # NOQA
 import pytest
 import requests
 
-RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 AKS_CLUSTER_VERSION = os.environ.get('RANCHER_AKS_CLUSTER_VERSION', '1.11.2')
 SSH_KEY = os.environ.get('RANCHER_SSH_KEY', "")
 SUBSCRIPTION_ID = os.environ.get('RANCHER_AKS_SUBSCRIPTION_ID', '')
@@ -27,9 +26,7 @@ def test_create_aks_cluster():
     cluster = client.create_cluster(aksConfig)
     cluster = validate_cluster(client, cluster, check_intermediate_state=True,
                                skipIngresscheck=True)
-
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def get_aks_version():
