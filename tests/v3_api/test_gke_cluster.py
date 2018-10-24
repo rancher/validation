@@ -3,7 +3,6 @@ import requests
 import pytest
 
 CREDENTIALS = os.environ.get('RANCHER_GKE_CREDENTIAL', "")
-RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 GKE_MASTER_VERSION = os.environ.get('RANCHER_GKE_MASTER_VERSION', "")
 
 gkecredential = pytest.mark.skipif(not CREDENTIALS, reason='GKE Credentials '
@@ -22,8 +21,7 @@ def test_create_gke_cluster():
     cluster = validate_cluster(client, cluster, check_intermediate_state=True,
                                skipIngresscheck=True)
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def get_gke_version_credentials():

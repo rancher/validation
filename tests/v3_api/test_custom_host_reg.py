@@ -1,11 +1,5 @@
-import os
-
-import rancher
-import requests
-
-from lib.aws import AmazonWebServices
-
 from .common import *  # NOQA
+import ast
 
 AGENT_REG_CMD = os.environ.get('RANCHER_AGENT_REG_CMD', "")
 HOST_COUNT = int(os.environ.get('RANCHER_HOST_COUNT', 1))
@@ -17,9 +11,8 @@ rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "network": {"type": "networkConfig", "plugin": "canal"},
               "type": "rancherKubernetesEngineConfig"
               }
-env_file = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    "rancher_env.config")
+AUTO_DEPLOY_CUSTOM_CLUSTER = ast.literal_eval(
+    os.environ.get('RANCHER_AUTO_DEPLOY_CUSTOM_CLUSTER', "True"))
 
 
 def test_add_custom_host():
@@ -43,30 +36,32 @@ def test_deploy_rancher_server():
     print(RANCHER_SERVER_URL)
     wait_until_active(RANCHER_SERVER_URL)
     token = get_admin_token(RANCHER_SERVER_URL)
-    aws_nodes = \
-        AmazonWebServices().create_multiple_nodes(
-            5, random_test_name("testcustom"))
-    node_roles = [["controlplane"], ["etcd"],
-                  ["worker"], ["worker"], ["worker"]]
-    client = rancher.Client(url=RANCHER_SERVER_URL+"/v3",
-                            token=token, verify=False)
-    cluster = client.create_cluster(name=random_name(),
-                                    driver="rancherKubernetesEngine",
-                                    rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
-    i = 0
-    for aws_node in aws_nodes:
-        docker_run_cmd = \
-            get_custom_host_registration_cmd(client, cluster, node_roles[i],
-                                             aws_node)
-        aws_node.execute_command(docker_run_cmd)
-        i += 1
-    validate_cluster_state(client, cluster)
     env_details = "env.CATTLE_TEST_URL='" + RANCHER_SERVER_URL + "'\n"
     env_details += "env.ADMIN_TOKEN='" + token + "'\n"
-    file = open(env_file, "w")
-    file.write(env_details)
-    file.close()
+
+    if AUTO_DEPLOY_CUSTOM_CLUSTER:
+        aws_nodes = \
+            AmazonWebServices().create_multiple_nodes(
+                5, random_test_name("testcustom"))
+        node_roles = [["controlplane"], ["etcd"],
+                      ["worker"], ["worker"], ["worker"]]
+        client = rancher.Client(url=RANCHER_SERVER_URL+"/v3",
+                                token=token, verify=False)
+        cluster = client.create_cluster(
+            name=random_name(),
+            driver="rancherKubernetesEngine",
+            rancherKubernetesEngineConfig=rke_config)
+        assert cluster.state == "active"
+        i = 0
+        for aws_node in aws_nodes:
+            docker_run_cmd = \
+                get_custom_host_registration_cmd(
+                    client, cluster, node_roles[i], aws_node)
+            aws_node.execute_command(docker_run_cmd)
+            i += 1
+        validate_cluster_state(client, cluster)
+        env_details += "env.CLUSTER_NAME='" + cluster.name + "'\n"
+    create_config_file(env_details)
 
 
 def get_admin_token(RANCHER_SERVER_URL):

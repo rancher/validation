@@ -1,10 +1,6 @@
 import os
 from threading import Thread
-
 import pytest
-
-from lib.aws import AmazonWebServices
-
 from .common import *  # NOQA
 
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
@@ -20,6 +16,7 @@ AZURE_SUBSCRIPTION_ID = os.environ.get("AZURE_SUBSCRIPTION_ID")
 AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
 AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
+worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
 
 engine_install_url = "https://releases.rancher.com/install-docker/17.03.sh"
 rke_config = {
@@ -67,9 +64,6 @@ rke_config_azure_provider["cloudProvider"] = {
 if_stress_enabled = pytest.mark.skipif(
     not os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT'),
     reason='Stress test not enabled')
-
-worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
-RANCHER_CLEANUP_CLUSTER = os.environ.get('RANCHER_CLEANUP_CLUSTER', "True")
 
 
 def test_rke_az_host_1(node_template_az):
@@ -155,9 +149,7 @@ def test_rke_custom_host_1():
                                              aws_node)
         aws_node.execute_command(docker_run_cmd)
     cluster = validate_cluster(client, cluster)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_2():
@@ -180,9 +172,7 @@ def test_rke_custom_host_2():
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_3():
@@ -207,9 +197,7 @@ def test_rke_custom_host_3():
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_4():
@@ -241,9 +229,7 @@ def test_rke_custom_host_4():
         host_thread.join()
     cluster = validate_cluster(client, cluster,
                                check_intermediate_state=False)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 @if_stress_enabled
@@ -268,6 +254,7 @@ def test_rke_custom_host_stress():
         aws_node.execute_command(docker_run_cmd)
         i += 1
     cluster = validate_cluster(client, cluster)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_etcd_plane_changes():
@@ -313,9 +300,7 @@ def test_rke_custom_host_etcd_plane_changes():
     client.delete(etcd_nodes[0])
     validate_cluster(client, cluster, intermediate_state="updating")
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_etcd_plane_changes_1():
@@ -354,9 +339,7 @@ def test_rke_custom_host_etcd_plane_changes_1():
 
     wait_for_cluster_node_count(client, cluster, 7)
     validate_cluster(client, cluster, intermediate_state="updating")
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_control_plane_changes():
@@ -397,9 +380,7 @@ def test_rke_custom_host_control_plane_changes():
     client.delete(control_nodes[0])
     validate_cluster(client, cluster, intermediate_state="updating")
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_host_worker_plane_changes():
@@ -437,9 +418,7 @@ def test_rke_custom_host_worker_plane_changes():
     client.delete(worker_nodes[0])
     validate_cluster(client, cluster, check_intermediate_state=False)
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def test_rke_custom_control_node_power_down():
@@ -492,9 +471,7 @@ def test_rke_custom_control_node_power_down():
     wait_for_cluster_node_count(client, cluster, 4)
     validate_cluster(client, cluster, check_intermediate_state=False)
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
-        delete_node(aws_nodes)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def validate_rke_dm_host_1(node_template,
@@ -513,8 +490,7 @@ def validate_rke_dm_host_1(node_template,
     nodes.append(node)
     cluster, node_pools = create_and_vaildate_cluster(
         client, nodes, rancherKubernetesEngineConfig)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def validate_rke_dm_host_2(node_template,
@@ -544,8 +520,7 @@ def validate_rke_dm_host_2(node_template,
     nodes.append(node)
     cluster, node_pools = create_and_vaildate_cluster(
         client, nodes, rancherKubernetesEngineConfig)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def validate_rke_dm_host_3(node_template,
@@ -575,8 +550,7 @@ def validate_rke_dm_host_3(node_template,
     nodes.append(node)
     cluster, node_pools = create_and_vaildate_cluster(
         client, nodes, rancherKubernetesEngineConfig)
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def validate_rke_dm_host_4(node_template,
@@ -614,8 +588,7 @@ def validate_rke_dm_host_4(node_template,
     cluster = validate_cluster(client, cluster, intermediate_state="updating")
     nodes = client.list_node(clusterId=cluster.id).data
     assert len(nodes) == 3
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster)
 
 
 def create_and_vaildate_cluster(client, nodes,
@@ -775,11 +748,6 @@ def node_template_ec2_with_provider():
     )
     node_template = client.wait_success(node_template)
     return node_template
-
-
-def delete_node(aws_nodes):
-    for node in aws_nodes:
-        AmazonWebServices().delete_node(node)
 
 
 def register_host_after_delay(client, cluster, node_role, delay):

@@ -24,8 +24,10 @@ USER_SEARCH_BASE = os.environ.get("RANCHER_USER_SEARCH_BASE")
 GROUP_SEARCH_BASE = os.environ.get("RANCHER_GROUP_SEARCH_BASE")
 PASSWORD = os.environ.get('RANCHER_USER_PASSWORD', "")
 AD_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_AD_SPECIAL_CHAR_PASSWORD")
-OPENLDAP_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_OPENLDAP_SPECIAL_CHAR_PASSWORD")
-FREEIPA_SPECIAL_CHAR_PASSWORD = os.environ.get("RANCHER_FREEIPA_SPECIAL_CHAR_PASSWORD")
+OPENLDAP_SPECIAL_CHAR_PASSWORD = \
+    os.environ.get("RANCHER_OPENLDAP_SPECIAL_CHAR_PASSWORD")
+FREEIPA_SPECIAL_CHAR_PASSWORD = \
+    os.environ.get("RANCHER_FREEIPA_SPECIAL_CHAR_PASSWORD")
 
 
 CATTLE_AUTH_URL = \
@@ -160,8 +162,10 @@ def special_character_users_login(access_mode):
         for group in auth_setup_data["specialchar_in_groupname"]:
             allowed_principal_ids.append(principal_lookup(group, admin_token))
 
-        allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
-        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+        allowed_principal_ids.append(
+            principal_lookup(admin_user, admin_token))
+        add_users_to_siteAccess(
+            admin_token, access_mode, allowed_principal_ids)
 
         for user in auth_setup_data["specialchar_in_username"]:
             login(user, PASSWORD)
@@ -184,10 +188,11 @@ def special_character_users_login(access_mode):
             allowed_principal_ids.append(principal_lookup(group, admin_token))
 
         allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
-        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+        add_users_to_siteAccess(
+            admin_token, access_mode, allowed_principal_ids)
 
         for user in auth_setup_data["specialchar_in_user_cn_sn"]:
-            login(user,PASSWORD)
+            login(user, PASSWORD)
         for user in auth_setup_data["specialchar_in_uid"]:
             login(user, PASSWORD)
         for user in auth_setup_data["specialchar_in_password"]:
@@ -204,11 +209,13 @@ def special_character_users_login(access_mode):
         for group in auth_setup_data["specialchar_in_groupname"]:
             allowed_principal_ids.append(principal_lookup(group, admin_token))
 
-        allowed_principal_ids.append(principal_lookup(admin_user, admin_token))
-        add_users_to_siteAccess(admin_token, access_mode, allowed_principal_ids)
+        allowed_principal_ids.append(
+            principal_lookup(admin_user, admin_token))
+        add_users_to_siteAccess(
+            admin_token, access_mode, allowed_principal_ids)
 
         for user in auth_setup_data["specialchar_in_users"]:
-            login(user,PASSWORD)
+            login(user, PASSWORD)
         for user in auth_setup_data["specialchar_in_password"]:
             login(user, FREEIPA_SPECIAL_CHAR_PASSWORD)
         for group in auth_setup_data["specialchar_in_groupname"]:
@@ -381,7 +388,8 @@ def validate_access_control_disable_and_enable_auth(access_mode):
         disable_freeipa(admin_user, admin_token)
         enable_freeipa(admin_user, admin_token)
 
-    # Login as users within allowed principal id list, which cannot perform disable action.
+    # Login as users within allowed principal id list, which cannot perform
+    # disable action.
     allowed_principal_ids = []
     for user in auth_setup_data["allowed_users"]:
         allowed_principal_ids.append(principal_lookup(user, admin_token))
@@ -393,14 +401,20 @@ def validate_access_control_disable_and_enable_auth(access_mode):
     for user in auth_setup_data["allowed_users"]:
         token = login(user, PASSWORD)
         if AUTH_PROVIDER == "activeDirectory":
-            disable_ad(user, token, expected_status=setup["permission_denied_code"])
-            enable_ad(user, token, expected_status=setup["permission_denied_code"])
+            disable_ad(user, token,
+                       expected_status=setup["permission_denied_code"])
+            enable_ad(user, token,
+                      expected_status=setup["permission_denied_code"])
         if AUTH_PROVIDER == "openLdap":
-            disable_openldap(user, token, expected_status=setup["permission_denied_code"])
-            enable_openldap(user, token, expected_status=setup["permission_denied_code"])
+            disable_openldap(user, token,
+                             expected_status=setup["permission_denied_code"])
+            enable_openldap(user, token,
+                            expected_status=setup["permission_denied_code"])
         if AUTH_PROVIDER == "freeIpa":
-            disable_freeipa(user, token, expected_status=setup["permission_denied_code"])
-            enable_freeipa(user, token, expected_status=setup["permission_denied_code"])
+            disable_freeipa(user, token,
+                            expected_status=setup["permission_denied_code"])
+            enable_freeipa(user, token,
+                           expected_status=setup["permission_denied_code"])
 
 
 def validate_access_control_disable_and_enable_nestedgroups(access_mode):
@@ -436,9 +450,11 @@ def validate_access_control_disable_and_enable_nestedgroups(access_mode):
 
     if AUTH_PROVIDER == "activeDirectory" or AUTH_PROVIDER == "openLdap":
         for user in auth_setup_data["users_under_nestedgroups"]:
-            login(user, PASSWORD, expected_status=setup["permission_denied_code"])
+            login(user, PASSWORD,
+                  expected_status=setup["permission_denied_code"])
 
-        # Enable nestedgroup feature, so users under nestedgroups can login successfully
+        # Enable nestedgroup feature, so users under nestedgroups can login
+        # successfully
         if AUTH_PROVIDER == "activeDirectory":
             enable_ad_nestedgroups(admin_user, token)
         if AUTH_PROVIDER == "openLdap":
@@ -446,7 +462,7 @@ def validate_access_control_disable_and_enable_nestedgroups(access_mode):
 
         allowed_principal_ids = []
         for group in auth_setup_data["allowed_nestedgroups"]:
-           allowed_principal_ids.append(principal_lookup(group, token))
+            allowed_principal_ids.append(principal_lookup(group, token))
         allowed_principal_ids.append(principal_lookup(admin_user, token))
 
         # Add users in allowed list to access rancher-server
@@ -497,9 +513,7 @@ def enable_openldap(username, token, expected_status=200):
         "nestedGroupMembershipEnabled": False,
         "enabled": True,
         "port": PORT,
-        "servers": [
-          HOSTNAME_OR_IP_ADDRESS
-        ],
+        "servers": [HOSTNAME_OR_IP_ADDRESS],
         "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
         "tls": get_tls(CA_CERTIFICATE),
         "userDisabledBitMask": 0,
@@ -515,13 +529,15 @@ def enable_openldap(username, token, expected_status=200):
     ca_cert = ldapConfig["certificate"]
     ldapConfig["certificate"] = ca_cert.replace('\\n', '\n')
 
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "ldapConfig": ldapConfig,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_ENABLE_URL,
+                      json={
+                          "ldapConfig": ldapConfig,
+                          "username": username,
+                          "password": PASSWORD},
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Enable openLdap request for " + username + " " + str(expected_status))
+    print("Enable openLdap request for " +
+          username + " " + str(expected_status))
 
 
 def disable_openldap(username, token, expected_status=200):
@@ -531,7 +547,8 @@ def disable_openldap(username, token, expected_status=200):
         'password': PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Disable openLdap request for " + username + " " + str(expected_status))
+    print("Disable openLdap request for " +
+          username + " " + str(expected_status))
 
 
 def enable_openldap_nestedgroup(username, token, expected_status=200):
@@ -549,9 +566,7 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
         "nestedGroupMembershipEnabled": True,
         "enabled": True,
         "port": PORT,
-        "servers": [
-          HOSTNAME_OR_IP_ADDRESS
-        ],
+        "servers": [HOSTNAME_OR_IP_ADDRESS],
         "serviceAccountDistinguishedName": SERVICE_ACCOUNT_NAME,
         "tls": get_tls(CA_CERTIFICATE),
         "userDisabledBitMask": 0,
@@ -567,110 +582,111 @@ def enable_openldap_nestedgroup(username, token, expected_status=200):
     ca_cert = ldapConfig["certificate"]
     ldapConfig["certificate"] = ca_cert.replace('\\n', '\n')
 
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "ldapConfig": ldapConfig,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_ENABLE_URL,
+                      json={"ldapConfig": ldapConfig,
+                            "username": username,
+                            "password": PASSWORD},
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Enable openLdap nestedgroup request for " + username + " " + str(expected_status))
+    print("Enable openLdap nestedgroup request for " +
+          username + " " + str(expected_status))
 
 
 def enable_ad(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
-          "accessMode": "unrestricted",
-          "certificate": CA_CERTIFICATE,
-          "connectionTimeout": CONNECTION_TIMEOUT,
-          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
-          "groupDNAttribute": "distinguishedName",
-          "groupMemberMappingAttribute": "member",
-          "groupMemberUserAttribute": "distinguishedName",
-          "groupNameAttribute": "name",
-          "groupObjectClass": "group",
-          "groupSearchAttribute": "sAMAccountName",
-          "nestedGroupMembershipEnabled": False,
-          "port": PORT,
-          "servers": [
-              HOSTNAME_OR_IP_ADDRESS
-          ],
-          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
-          "tls": get_tls(CA_CERTIFICATE),
-          "userDisabledBitMask": 2,
-          "userEnabledAttribute": "userAccountControl",
-          "userLoginAttribute": "sAMAccountName",
-          "userNameAttribute": "name",
-          "userObjectClass": "person",
-          "userSearchAttribute": "sAMAccountName|sn|givenName",
-          "userSearchBase": USER_SEARCH_BASE,
-          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+        "accessMode": "unrestricted",
+        "certificate": CA_CERTIFICATE,
+        "connectionTimeout": CONNECTION_TIMEOUT,
+        "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
+        "groupDNAttribute": "distinguishedName",
+        "groupMemberMappingAttribute": "member",
+        "groupMemberUserAttribute": "distinguishedName",
+        "groupNameAttribute": "name",
+        "groupObjectClass": "group",
+        "groupSearchAttribute": "sAMAccountName",
+        "nestedGroupMembershipEnabled": False,
+        "port": PORT,
+        "servers": [HOSTNAME_OR_IP_ADDRESS],
+        "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
+        "tls": get_tls(CA_CERTIFICATE),
+        "userDisabledBitMask": 2,
+        "userEnabledAttribute": "userAccountControl",
+        "userLoginAttribute": "sAMAccountName",
+        "userNameAttribute": "name",
+        "userObjectClass": "person",
+        "userSearchAttribute": "sAMAccountName|sn|givenName",
+        "userSearchBase": USER_SEARCH_BASE,
+        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
     }
 
     ca_cert = activeDirectoryConfig["certificate"]
     activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
 
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "activeDirectoryConfig": activeDirectoryConfig,
-      "enabled": True,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_ENABLE_URL,
+                      json={"activeDirectoryConfig": activeDirectoryConfig,
+                            "enabled": True,
+                            "username": username,
+                            "password": PASSWORD},
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Enable ActiveDirectory request for " + username + " " + str(expected_status))
+    print("Enable ActiveDirectory request for " +
+          username + " " + str(expected_status))
 
 
 def disable_ad(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
-    r = requests.post(CATTLE_AUTH_DISABLE_URL, json={
-      "enabled": False,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_DISABLE_URL,
+                      json={"enabled": False,
+                            "username": username,
+                            "password": PASSWORD
+                            },
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Disable ActiveDirectory request for " + username + " " + str(expected_status))
+    print("Disable ActiveDirectory request for " +
+          username + " " + str(expected_status))
 
 
 def enable_ad_nestedgroups(username, token, expected_status=200):
     headers = {'Authorization': 'Bearer ' + token}
     activeDirectoryConfig = {
-          "accessMode": "unrestricted",
-          "certificate": CA_CERTIFICATE,
-          "connectionTimeout": CONNECTION_TIMEOUT,
-          "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
-          "groupDNAttribute": "distinguishedName",
-          "groupMemberMappingAttribute": "member",
-          "groupMemberUserAttribute": "distinguishedName",
-          "groupNameAttribute": "name",
-          "groupObjectClass": "group",
-          "groupSearchAttribute": "sAMAccountName",
-          "nestedGroupMembershipEnabled": True,
-          "port": PORT,
-          "servers": [
-              HOSTNAME_OR_IP_ADDRESS
-          ],
-          "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
-          "tls": get_tls(CA_CERTIFICATE),
-          "userDisabledBitMask": 2,
-          "userEnabledAttribute": "userAccountControl",
-          "userLoginAttribute": "sAMAccountName",
-          "userNameAttribute": "name",
-          "userObjectClass": "person",
-          "userSearchAttribute": "sAMAccountName|sn|givenName",
-          "userSearchBase": USER_SEARCH_BASE,
-          "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
+        "accessMode": "unrestricted",
+        "certificate": CA_CERTIFICATE,
+        "connectionTimeout": CONNECTION_TIMEOUT,
+        "defaultLoginDomain": DEFAULT_LOGIN_DOMAIN,
+        "groupDNAttribute": "distinguishedName",
+        "groupMemberMappingAttribute": "member",
+        "groupMemberUserAttribute": "distinguishedName",
+        "groupNameAttribute": "name",
+        "groupObjectClass": "group",
+        "groupSearchAttribute": "sAMAccountName",
+        "nestedGroupMembershipEnabled": True,
+        "port": PORT,
+        "servers": [HOSTNAME_OR_IP_ADDRESS],
+        "serviceAccountUsername": SERVICE_ACCOUNT_NAME,
+        "tls": get_tls(CA_CERTIFICATE),
+        "userDisabledBitMask": 2,
+        "userEnabledAttribute": "userAccountControl",
+        "userLoginAttribute": "sAMAccountName",
+        "userNameAttribute": "name",
+        "userObjectClass": "person",
+        "userSearchAttribute": "sAMAccountName|sn|givenName",
+        "userSearchBase": USER_SEARCH_BASE,
+        "serviceAccountPassword": SERVICE_ACCOUNT_PASSWORD
     }
 
     ca_cert = activeDirectoryConfig["certificate"]
     activeDirectoryConfig["certificate"] = ca_cert.replace('\\n', '\n')
 
-    r = requests.post(CATTLE_AUTH_ENABLE_URL, json={
-      "activeDirectoryConfig": activeDirectoryConfig,
-      "enabled": True,
-      "username": username,
-      "password": PASSWORD
-    }, verify=False, headers=headers)
+    r = requests.post(CATTLE_AUTH_ENABLE_URL,
+                      json={"activeDirectoryConfig": activeDirectoryConfig,
+                            "enabled": True,
+                            "username": username,
+                            "password": PASSWORD},
+                      verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Enable ActiveDirectory nestedgroup request for " + username + " " + str(expected_status))
+    print("Enable ActiveDirectory nestedgroup request for " +
+          username + " " + str(expected_status))
 
 
 def enable_freeipa(username, token, expected_status=200):
@@ -708,7 +724,8 @@ def enable_freeipa(username, token, expected_status=200):
         "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Enable freeIpa request for " + username + " " + str(expected_status))
+    print("Enable freeIpa request for " +
+          username + " " + str(expected_status))
 
 
 def disable_freeipa(username, token, expected_status=200):
@@ -719,7 +736,8 @@ def disable_freeipa(username, token, expected_status=200):
         "password": PASSWORD
     }, verify=False, headers=headers)
     assert r.status_code == expected_status
-    print("Disable freeIpa request for " + username + " " + str(expected_status))
+    print("Disable freeIpa request for " +
+          username + " " + str(expected_status))
 
 
 def principal_lookup(name, token):
