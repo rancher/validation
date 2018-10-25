@@ -9,6 +9,236 @@ CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 RANCHER_CLEANUP_PROJECT = os.environ.get("RANCHER_CLEANUP_PROJECT", "True")
 namespace = {"p_client": None, "ns": None, "cluster": None,
              "project": None, "testclient_pods": [], "workload": None}
+DNS_RESOLUTION_DEFAULT_SECONDS = \
+    os.environ.get("RANCHER_DNS_RESOLUTION_SECONDS", 30)
+
+
+def create_and_validate_wl(name, con, scale, type, p_client=None, ns=None):
+    if p_client is None:
+        p_client = namespace["p_client"]
+    if ns is None:
+        ns = namespace["ns"]
+
+    workload = p_client.create_workload(name=name, containers=con,
+                                        namespaceId=ns.id, scale=scale)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    validate_workload(p_client, workload, type, ns.id, pod_count=scale)
+    return workload
+
+
+def validate_service_discovery(workload, scale,
+                               p_client=None, ns=None, testclient_pods=None):
+    if p_client is None:
+        p_client = namespace["p_client"]
+    if ns is None:
+        ns = namespace["ns"]
+    if testclient_pods is None:
+        testclient_pods = namespace["testclient_pods"]
+
+    expected_ips = []
+    pods = p_client.list_pod(workloadId=workload["id"]).data
+    assert len(pods) == scale
+    for pod in pods:
+        expected_ips.append(pod["status"]["podIp"])
+    host = '{0}.{1}.svc.cluster.local'.format(workload.name, ns.id)
+    for pod in testclient_pods:
+        validate_dns_entry(pod, host, expected_ips)
+
+
+def update_and_validate_workload(workload, con, scale, p_client=None, ns=None):
+    if p_client is None:
+        p_client = namespace["p_client"]
+    if ns is None:
+        ns = namespace["ns"]
+
+    p_client.update(workload, containers=con, scale=scale)
+    wait_for_pod_images(p_client, workload, ns.name, con[0]["image"], scale)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    validate_workload(p_client, workload, "deployment", ns.name, scale)
+    validate_workload_image(p_client, workload, con[0]["image"], ns)
+
+
+def validate_dns_record_for_workload(workload, scale, record,
+                                     p_client=None, testclient_pods=None):
+    if p_client is None:
+        p_client = namespace["p_client"]
+    if testclient_pods is None:
+        testclient_pods = namespace["testclient_pods"]
+
+    expected_ips = []
+    pods = p_client.list_pod(workloadId=workload["id"]).data
+    assert len(pods) == scale
+    for pod in pods:
+        expected_ips.append(pod["status"]["podIp"])
+    for pod in testclient_pods:
+        validate_dns_record(pod, record, expected_ips)
+
+
+def test_service_discovery_when_workload_scale_up():
+    p_client = namespace["p_client"]
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    name = random_test_name("test-sd-up")
+    type = "deployment"
+
+    # deploy a workload
+    scale = 2
+    workload = create_and_validate_wl(name, con, scale, type)
+    # test service discovery
+    validate_service_discovery(workload, scale)
+
+    # workload scales up to 3 pods
+    scale = 3
+    p_client.update(workload, scale=scale, containers=con)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_service_discovery(workload, scale)
+
+
+def test_service_discovery_when_workload_scale_down():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    name = random_test_name("test-sd-dw")
+    type = "deployment"
+
+    # deploy a workload
+    scale = 3
+    workload = create_and_validate_wl(name, con, scale, type)
+    # test service discovery
+    validate_service_discovery(workload, scale)
+
+    # workload scale down to 2 pods
+    scale = 2
+    p_client.update(workload, scale=scale, containers=con)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_service_discovery(workload, scale)
+
+
+def test_service_discovery_when_workload_upgrade():
+    con = [{"name": "test1",
+            "image": TEST_TARGET_IMAGE}]
+    name = random_test_name("test-sd-upgrade")
+    type = "deployment"
+    scale = 2
+
+    # deploy a workload
+    workload = create_and_validate_wl(name, con, scale, type)
+    # test service discovery
+    validate_service_discovery(workload, scale)
+
+    # upgrade
+    con = [{"name": "test1",
+            "image": "nginx"}]
+    update_and_validate_workload(workload, con, scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_service_discovery(workload, scale)
+
+    # upgrade again
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    update_and_validate_workload(workload, con, scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_service_discovery(workload, scale)
+
+
+def test_dns_record_type_workload_when_workload_scale_up():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    name = random_test_name("test-dns-up")
+    type = "deployment"
+
+    # deploy a workload
+    scale = 2
+    workload = create_and_validate_wl(name, con, scale, type)
+    record = {"type": "dnsRecord", "targetWorkloadIds": [workload["id"]],
+              "name": random_test_name("record"), "namespaceId": ns.id}
+    create_dns_record(record, p_client)
+    # test dns record for the workload
+    validate_dns_record_for_workload(workload, scale, record)
+
+    # workload scale up to 3 pods
+    scale = 3
+    p_client.update(workload, scale=scale, containers=con)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_dns_record_for_workload(workload, scale, record)
+
+
+def test_dns_record_type_workload_when_workload_scale_down():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    name = random_test_name("test-dns-dw")
+    type = "deployment"
+
+    # deploy a workload
+    scale = 3
+    workload = create_and_validate_wl(name, con, scale, type)
+    record = {"type": "dnsRecord",
+              "targetWorkloadIds": [workload["id"]],
+              "name": random_test_name("record"),
+              "namespaceId": ns.id}
+    create_dns_record(record, p_client)
+    # test service discovery
+    validate_dns_record_for_workload(workload, scale, record)
+
+    # workload scale down to 2 pods
+    scale = 2
+    p_client.update(workload, scale=scale, containers=con)
+    wait_for_pods_in_workload(p_client, workload, scale)
+    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_dns_record_for_workload(workload, scale, record)
+
+
+def test_dns_record_type_workload_when_workload_upgrade():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    con = [{"name": "test1",
+            "image": TEST_TARGET_IMAGE}]
+    name = random_test_name("test-dns-upgrade")
+    scale = 2
+    type = "deployment"
+
+    # deploy a workload
+    workload = create_and_validate_wl(name, con, scale, type)
+    record = {"type": "dnsRecord", "targetWorkloadIds": [workload["id"]],
+              "name": random_test_name("record"), "namespaceId": ns.id}
+    create_dns_record(record, p_client)
+    # test service discovery
+    validate_dns_record_for_workload(workload, scale, record)
+
+    # upgrade the workload
+    con = [{"name": "test1",
+            "image": "nginx"}]
+    update_and_validate_workload(workload, con, scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_dns_record_for_workload(workload, scale, record)
+
+    # upgrade the workload again
+    con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    update_and_validate_workload(workload, con, scale)
+    # test service discovery
+    time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
+    validate_dns_record_for_workload(workload, scale, record)
 
 
 def test_dns_record_type_external_ip():
