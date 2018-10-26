@@ -1,8 +1,7 @@
 import os
-from invoke import run
 import json
 import time
-
+import subprocess
 
 DEBUG = os.environ.get('DEBUG', 'false')
 CONFORMANCE_YAML = ("tests/kubernetes_conformance/resources/k8s_ymls/"
@@ -70,7 +69,7 @@ class KubectlClient(object):
             command += ' -o json'
         print("Running kubectl command: {}".format(command))
         start_time = time.time()
-        result = run(command, warn=True, hide=self._hide)
+        result = self.run_command(command)
         end_time = time.time()
         print('Run time for command {0}: {1} seconds'.format(
             command, end_time - start_time))
@@ -83,7 +82,7 @@ class KubectlClient(object):
             cmd, self._cli_options(**cli_options))
         print("Running kubectl command: {}".format(command))
         start_time = time.time()
-        result = run(command, warn=True, hide=self._hide)
+        result = self.run_command(command)
         end_time = time.time()
         print('Run time for command {0}: {1} seconds'.format(
             command, end_time - start_time))
@@ -144,7 +143,7 @@ class KubectlClient(object):
         if name:
             command += ' {0}'.format(name)
         result = self.execute_kubectl(command, **cli_options)
-        return self._load_json(result.stdout)
+        return self._load_json(result)
 
     def get_resource(self, resource, name=None, **cli_options):
         cli_options = self._default_output_json(**cli_options)
@@ -152,7 +151,7 @@ class KubectlClient(object):
         if name:
             command += ' {0}'.format(name)
         result = self.execute_kubectl(command, **cli_options)
-        return self._load_json(result.stdout)
+        return self._load_json(result)
 
     def delete_resourse(self, resource, name=None, **cli_options):
         command = "delete {0}".format(resource)
@@ -164,25 +163,31 @@ class KubectlClient(object):
         start_time = int(time.time())
         while True:
             pods = self.get_resource('pods', **cli_options)
-            if len(pods.get('items', [])) == number_of_pods:
+            print("pods:")
+            print(pods)
+            print (len(pods['items']))
+            if len(pods['items']) == number_of_pods:
+                running_pods = 0
                 for pod in pods['items']:
+                    print (pod['status']['phase'])
                     if pod['status']['phase'] != state:
                         print("Pod '{0}' not {1} is {2}!".format(
                             pod['metadata']['name'], state,
                             pod['status']['phase']))
                         break
-                else:
-                    time.sleep(15)
+                    else:
+                        running_pods += 1
+                if running_pods == number_of_pods:
                     return pods
             if int(time.time()) - start_time > 300:
-                pod_states = []
+                pod_states = {}
                 for p in pods.get('items', []):
                     pod_states[p['metadata']['name']] = p['status']['phase']
                 raise Exception(
                     'Timeout Exception: pods did not start\n'
                     'Expect number of pods {0} vs number of pods found {1}:\n'
                     'Pod states: {2}'.format(
-                        number_of_pods, len(pods['items'], pod_states)))
+                        number_of_pods, len(pod_states), pod_states))
             time.sleep(5)
 
     def wait_for_pod(self, name, state='Running', **cli_options):
@@ -211,3 +216,16 @@ class KubectlClient(object):
             "stdout: {1}\nstderr:{2}\n".format(
                 command, result.stdout, result.stderr))
         return result
+
+    def run_command(self, command):
+        return subprocess.check_output(command, shell=True, text=True)
+
+    def run_command_with_stderr(self, command):
+        try:
+            output = subprocess.check_output(command, shell=True,
+                                             stderr=subprocess.PIPE)
+            returncode = 0
+        except subprocess.CalledProcessError as e:
+            output = e.output
+            returncode = e.returncode
+        print(returncode)

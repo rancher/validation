@@ -18,5 +18,5 @@ spec:
         effect: NoSchedule
       containers:
       - name: daemonset-test1
-        image: tjcordingly/container-utils:latest
+        image: sangeetha/mytestcontainer
       terminationGracePeriodSeconds: 30

@@ -1,9 +1,9 @@
-from invoke import run
 import os
 import jinja2
 import logging
 import tempfile
 import time
+import subprocess
 from yaml import load
 
 
@@ -11,8 +11,6 @@ logging.getLogger('invoke').setLevel(logging.WARNING)
 DEBUG = os.environ.get('DEBUG', 'false')
 
 DEFAULT_CONFIG_NAME = 'cluster.yml'
-DEFAULT_K8S_IMAGE = os.environ.get(
-    'DEFAULT_K8S_IMAGE', 'rancher/k8s:v1.8.7-rancher1-1')
 DEFAULT_NETWORK_PLUGIN = os.environ.get('DEFAULT_NETWORK_PLUGIN', 'canal')
 
 
@@ -29,9 +27,7 @@ class RKEClient(object):
     def _run(self, command):
         print('Running command: {}'.format(command))
         start_time = time.time()
-        result = run(
-            'cd {0} && {1}'.format(self._working_dir, command),
-            warn=True, hide=self._hide)
+        result = self.run_command('cd {0} && {1}'.format(self._working_dir, command))
         end_time = time.time()
         print('Run time for command {0}: {1} seconds'.format(
             command, end_time - start_time))
@@ -42,9 +38,8 @@ class RKEClient(object):
         self._save_cluster_yml(yml_name, config_yml)
         cli_args = '' if config is None else ' --config {0}'.format(config)
         result = self._run("rke up {0}".format(cli_args))
-        if result.ok:
-            print("RKE kube_config:\n{0}".format(
-                self.get_kube_config_for_config()))
+        print(
+            "RKE kube_config:\n{0}".format(self.get_kube_config_for_config()))
         return result
 
     def remove(self, config=None):
@@ -58,7 +53,6 @@ class RKEClient(object):
         """
         render_dict = {
             'master_ssh_key_path': self.master_ssh_key_path,
-            'k8_rancher_image': DEFAULT_K8S_IMAGE,
             'network_plugin': DEFAULT_NETWORK_PLUGIN}
         render_dict.update(kwargs)  # will up master_key if passed in
         node_index = 0
@@ -134,3 +128,16 @@ class RKEClient(object):
         contents = self.get_kube_config_for_config(yml_name)
         with open(file_name, 'w') as f:
             f.write(contents)
+
+    def run_command(self, command):
+        return subprocess.check_output(command, shell=True, text=True)
+
+    def run_command_with_stderr(self, command):
+        try:
+            output = subprocess.check_output(command, shell=True,
+                                             stderr=subprocess.PIPE)
+            returncode = 0
+        except subprocess.CalledProcessError as e:
+            output = e.output
+            returncode = e.returncode
+        print(returncode)

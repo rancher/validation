@@ -73,7 +73,8 @@ class Node(object):
                 key_filename=self.ssh_key_path, port=self.ssh_port)
             result = self._ssh_client.exec_command(command)
             if result and len(result) == 3 and result[1].readable():
-                result = [result[1].read(), result[2].read()]
+                result = [str(result[1].read(),'utf-8'),
+                          str(result[2].read(),'utf-8')]
         finally:
             self._ssh_client.close()
         return result

@@ -7,7 +7,7 @@ metadata:
 spec:
  ports:
  - port: 80
-   targetPort: 5000
+   targetPort: 80
    protocol: TCP
    name: http
  selector:
@@ -29,6 +29,6 @@ spec:
      terminationGracePeriodSeconds: 60
      containers:
      - name: testcontainer
-       image: tjcordingly/container-utils
+       image: sangeetha/mytestcontainer
        ports:
-       - containerPort: 5000
+       - containerPort: 80

@@ -16,9 +16,9 @@ spec:
     spec:
       containers:
       - name: pod-test-util
-        image: tjcordingly/container-utils
+        image: sangeetha/mytestcontainer
         ports:
-        - containerPort: 5000
+        - containerPort: 80
       - name: nginx
         image: nginx
         ports:
