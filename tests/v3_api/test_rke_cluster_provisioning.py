@@ -474,6 +474,16 @@ def test_rke_custom_control_node_power_down():
     cluster_cleanup(client, cluster, aws_nodes)
 
 
+def test_delete_cluster():
+    client = get_admin_client()
+    if len(CLUSTER_NAME) > 0:
+        clusters = client.list_cluster(name=CLUSTER_NAME).data
+    else:
+        clusters = client.list_cluster().data
+    for cluster in clusters:
+        delete_cluster(client, cluster)
+
+
 def validate_rke_dm_host_1(node_template,
                            rancherKubernetesEngineConfig=rke_config):
     client = get_admin_client()

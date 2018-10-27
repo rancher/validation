@@ -130,7 +130,8 @@ class AmazonWebServices(CloudProviderBase):
                     'AssociatePublicIpAddress': True,
                     'Groups': AWS_SECURITY_GROUPS}],
                 "Placement": {'AvailabilityZone': AWS_REGION_AZ},
-                "BlockDeviceMappings": [{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 50}}]
+                "BlockDeviceMappings":
+                    [{"DeviceName": "/dev/sda1", "Ebs": {"VolumeSize": 50}}]
                 }
         if (len(AWS_IAM_PROFILE) > 0):
             args["IamInstanceProfile"] = {'Name': AWS_IAM_PROFILE}
@@ -285,3 +286,32 @@ class AmazonWebServices(CloudProviderBase):
 
     def delete_ssh_key(self, ssh_key_name):
         self._client.delete_key_pair(KeyName=ssh_key_name)
+
+    def get_nodes(self, filters):
+        try:
+            response = self._client.describe_instances(Filters=filters)
+            nodes = response.get('Reservations', [])
+            if len(nodes) == 0:
+                return None  # no node found
+            ret_nodes = []
+            for aws_node_i in nodes:
+                aws_node = aws_node_i['Instances'][0]
+                node = Node(
+                    provider_node_id=aws_node.get('InstanceId'),
+                    # node_name= aws_node tags?,
+                    host_name=aws_node.get('PublicDnsName'),
+                    public_ip_address=aws_node.get('PublicIpAddress'),
+                    private_ip_address=aws_node.get('PrivateIpAddress'),
+                    state=aws_node['State']['Name'])
+                ret_nodes.append(node)
+            return ret_nodes
+        except Boto3Error as e:
+            msg = "Failed while getting instances: {}".format(str(e))
+            raise RuntimeError(msg)
+
+    def delete_nodes(self, nodes, wait_for_deleted=False):
+        instance_ids = [node.provider_node_id for node in nodes]
+        self._client.terminate_instances(InstanceIds=instance_ids)
+        if wait_for_deleted:
+            for node in nodes:
+                node = self.wait_for_node_state(node, 'terminated')

@@ -91,10 +91,8 @@ def wait_for_condition(client, resource, check_function, fail_handler=None,
             if (fail_handler):
                 exceptionMsg = exceptionMsg + fail_handler(resource)
             raise Exception(exceptionMsg)
-
         time.sleep(.5)
         resource = client.reload(resource)
-
     return resource
 
 
@@ -683,17 +681,50 @@ def create_custom_host_registration_token(client, cluster):
     return cluster_token
 
 
+def get_cluster_type(client, cluster):
+    cluster_configs = [
+        "amazonElasticContainerServiceConfig",
+        "azureKubernetesServiceConfig",
+        "googleKubernetesEngineConfig",
+        "rancherKubernetesEngineConfig"
+    ]
+    if "rancherKubernetesEngineConfig" in cluster:
+        nodes = client.list_node(clusterId=cluster.id).data
+        if len(nodes) > 0:
+            if nodes[0].nodeTemplateId is None:
+                return "Custom"
+    for cluster_config in cluster_configs:
+        if cluster_config in cluster:
+                return cluster_config
+    return "Imported"
+
+
 def delete_cluster(client, cluster):
+    nodes = client.list_node(clusterId=cluster.id).data
     # Delete Cluster
     client.delete(cluster)
-    """
-    cluster = wait_for_condition(
-        client, cluster,
-        lambda x: x.state == "removed",
-        lambda x: 'State is: ' + x.state,
-        timeout=m_timeout)
-    assert cluster.state == "removed"
-    """
+    # Delete nodes(in cluster) from AWS for Imported and Custom Cluster
+    if (len(nodes) > 0):
+        cluster_type = get_cluster_type(client, cluster)
+        print(cluster_type)
+        if get_cluster_type(client, cluster) in ["Imported", "Custom"]:
+            nodes = client.list_node(clusterId=cluster.id).data
+            filters = [
+                {'Name': 'tag:Name', 'Values': ['testcustom*']}]
+            ip_filter = {}
+            ip_list = []
+            ip_filter['Name'] = \
+                'network-interface.addresses.association.public-ip'
+            ip_filter['Values'] = ip_list
+            filters.append(ip_filter)
+            for node in nodes:
+                ip_list.append(node.externalIpAddress)
+            assert len(ip_filter) > 0
+            print(ip_filter)
+            aws_nodes = AmazonWebServices().get_nodes(filters)
+            for node in aws_nodes:
+                print(node.public_ip_address)
+                AmazonWebServices().delete_nodes(aws_nodes)
 
 
 def check_connectivity_between_workloads(p_client1, workload1, p_client2,
@@ -851,7 +882,7 @@ def delete_node(aws_nodes):
 
 def cluster_cleanup(client, cluster, aws_nodes=None):
     if RANCHER_CLEANUP_CLUSTER:
-        delete_cluster(client, cluster)
+        client.delete(cluster)
         if aws_nodes is not None:
             delete_node(aws_nodes)
     else:
