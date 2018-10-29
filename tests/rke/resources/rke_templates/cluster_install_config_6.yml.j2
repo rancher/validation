@@ -19,16 +19,3 @@ nodes:
     role: [worker]
     internal_address: {{ internal_address_2 }}
     hostname_override: {{ hostname_override_2 }}
-services:
-  etcd:
-    image: quay.io/coreos/etcd:latest
-  kube-api:
-    image: {{ k8_rancher_image }}
-  kube-controller:
-    image: {{ k8_rancher_image }}
-  scheduler:
-    image: {{ k8_rancher_image }}
-  kubelet:
-    image: {{ k8_rancher_image }}
-  kubeproxy:
-    image: {{ k8_rancher_image }}

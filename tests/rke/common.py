@@ -1,16 +1,19 @@
 import time
+import os
 
+k8s_resurce_dir = os.path.dirname(os.path.realpath(__file__)) + \
+                  "/resources/k8s_ymls/"
 
 def create_and_validate(
     cloud_provider, rke_client, kubectl, rke_template, nodes,
     base_namespace="ns", network_validation=None, dns_validation=None,
-        teardown=False, remove_nodes=False):
+        teardown=False, remove_nodes=False, etcd_private_ip=False):
 
     create_rke_cluster(rke_client, kubectl, nodes, rke_template)
     network_validation, dns_validation = validate_rke_cluster(
         rke_client, kubectl, nodes, base_ns=base_namespace,
         network_validation=network_validation, dns_validation=dns_validation,
-        teardown=teardown)
+        teardown=teardown, etcd_private_ip=etcd_private_ip)
 
     if remove_nodes:
         delete_nodes(cloud_provider, nodes)
@@ -35,7 +38,6 @@ def create_rke_cluster(
 
     # run rke up
     result = rke_client.up(config_yml)
-    assert result.ok, result.stderr
 
     # validate k8s reachable
     kubectl.kube_config_path = rke_client.kube_config_path()
@@ -45,7 +47,7 @@ def create_rke_cluster(
 
 def validate_rke_cluster(rke_client, kubectl, nodes, base_ns='one',
                          network_validation=None, dns_validation=None,
-                         teardown=False):
+                         teardown=False, etcd_private_ip=False):
     """
     General rke up test validation, runs validations methods for:
     - node roles validation
@@ -54,7 +56,7 @@ def validate_rke_cluster(rke_client, kubectl, nodes, base_ns='one',
     If teardown is true, removes any resources created for validation
     """
 
-    validation_node_roles(nodes, kubectl.get_nodes())
+    validation_node_roles(nodes, kubectl.get_nodes(),etcd_private_ip)
     if network_validation is None:
         network_validation = PodIntercommunicationValidation(kubectl, base_ns)
         network_validation.setup()
@@ -120,23 +122,26 @@ def assert_containers_exist_for_roles(roles, containers):
             roles, missing_containers)
 
 
-def wait_for_etcd_cluster_health(node):
+def wait_for_etcd_cluster_health(node, etcd_private_ip=False):
     result = ''
+    endpoints = "127.0.0.1"
+    if etcd_private_ip:
+        endpoints = node.private_ip_address
     etcd_tls_cmd = (
-        'etcdctl --endpoints "https://127.0.0.1:2379" --ca-file '
-        '/etc/kubernetes/ssl/kube-ca.pem --cert-file '
+        'ETCDCTL_API=2 etcdctl --endpoints "https://'+endpoints+':2379" --ca-file'
+        ' /etc/kubernetes/ssl/kube-ca.pem --cert-file '
         '/etc/kubernetes/ssl/kube-node.pem --key-file '
         '/etc/kubernetes/ssl/kube-node-key.pem cluster-health')
     start_time = time.time()
     while start_time - time.time() < 120:
-        result = node.docker_exec('etcd', etcd_tls_cmd)
+        result = node.docker_exec('etcd', "sh -c '"+ etcd_tls_cmd+"'")
         if 'cluster is healthy' in result:
             break
         time.sleep(5)
     return result
 
 
-def validation_node_roles(nodes, k8s_nodes):
+def validation_node_roles(nodes, k8s_nodes, etcd_private_ip=False):
     """
     Validates each node's labels for match its roles
     Validates each node's running containers match its role
@@ -191,7 +196,7 @@ def validation_node_roles(nodes, k8s_nodes):
                         assert False, \
                             "Expected to find taint for etcd-only node"
                 # check etcd membership and cluster health
-                result = wait_for_etcd_cluster_health(node)
+                result = wait_for_etcd_cluster_health(node, etcd_private_ip)
                 for member in etcd_members:
                     expect = "got healthy result from https://{}".format(
                         member)
@@ -203,7 +208,7 @@ class PodIntercommunicationValidation(object):
     def __init__(self, kubectl, base_namespace):
         self.kubectl = kubectl
         self.yml_file = (
-            'tests/rke/resources/k8s_ymls/daemonset_pods_per_node.yml')
+            k8s_resurce_dir + 'daemonset_pods_per_node.yml')
         self.ns_out = 'daemonset-out-{}'.format(base_namespace)
         self.ns_in = 'daemonset-in-{}'.format(base_namespace)
         self.selector = 'name=daemonset-test1'
@@ -212,12 +217,10 @@ class PodIntercommunicationValidation(object):
         self.kubectl.create_ns(self.ns_out)
         result = self.kubectl.create_resourse_from_yml(
             self.yml_file, namespace=self.ns_out)
-        assert result.ok, result.stderr
 
         self.kubectl.create_ns(self.ns_in)
         result = self.kubectl.create_resourse_from_yml(
             self.yml_file, namespace=self.ns_in)
-        assert result.ok, result.stderr
 
     def validate(self):
         """
@@ -233,10 +236,11 @@ class PodIntercommunicationValidation(object):
             'nodes', selector='node-role.kubernetes.io/controlplane=true')
         node_names = [n['metadata']['name'] for n in worker_nodes['items']]
         expected_number_pods = len(worker_nodes['items'])
+        """
         for master_node in master_nodes['items']:
             if master_node['metadata']['name'] not in node_names:
                 expected_number_pods += 1
-
+        """
         # get pods on each node/namespaces to test intercommunication
         # with pods on different nodes
         pods_to_ping = self.kubectl.wait_for_pods(
@@ -266,20 +270,17 @@ class PodIntercommunicationValidation(object):
 
         # From each pod of daemonset in namespace ns_out, ping all pods
         # in from second daemonset in ns_in
-        expect_result = '1 packets transmitted, 1 received, 0% packet loss'
+        expect_result = \
+            '1 packets transmitted, 1 received, 0% packet loss'
         for pod_name in pod_names_to_ping_from:
             for pod_ip in pod_ips_to_ping:
                 cmd = 'ping -c 1 {0}'.format(pod_ip)
                 for _ in range(10):
                     result = self.kubectl.exec_cmd(pod_name, cmd, self.ns_out)
-                    if expect_result in result.stdout:
-                        break
-                    time.sleep(3)
-                else:
-                    assert expect_result in result.stdout, (
+                    assert expect_result in result, (
                         "Could not ping pod with ip {0} from pod {1}:\n"
-                        "stdout: {2}\nstderr:{3}".format(
-                            pod_ip, pod_name, result.stdout, result.stderr))
+                        "stdout: {2}\n".format(
+                            pod_ip, pod_name, result))
 
     def teardown(self):
         """
@@ -287,10 +288,8 @@ class PodIntercommunicationValidation(object):
         """
         result = self.kubectl.delete_resourse_from_yml(
             self.yml_file, namespace=self.ns_out)
-        assert result.ok, result.stderr
         result = self.kubectl.delete_resourse_from_yml(
             self.yml_file, namespace=self.ns_in)
-        assert result.ok, result.stderr
         self.kubectl.delete_resourse('namespace', self.ns_out)
         self.kubectl.delete_resourse('namespace', self.ns_in)
 
@@ -304,16 +303,17 @@ class DNSServiceDiscoveryValidation(object):
             'k8test1': {
                 'namespace': namespace_one,
                 'selector': 'k8s-app=k8test1-service',
-                'yml_file': 'tests/rke/resources/k8s_ymls/service_k8test1.yml',
+                'yml_file': k8s_resurce_dir + 'service_k8test1.yml',
             },
             'k8test2': {
                 'namespace': namespace_two,
                 'selector': 'k8s-app=k8test2-service',
-                'yml_file': 'tests/rke/resources/k8s_ymls/service_k8test2.yml',
+                'yml_file': k8s_resurce_dir + 'service_k8test2.yml',
             }
         }
         self.pod_selector = 'k8s-app=pod-test-util'
         self.kubectl = kubectl
+
 
     def setup(self):
 
@@ -323,12 +323,11 @@ class DNSServiceDiscoveryValidation(object):
 
             result = self.kubectl.create_resourse_from_yml(
                 service_info['yml_file'], namespace=service_info['namespace'])
-            assert result.ok, result.stderr
 
         result = self.kubectl.create_resourse_from_yml(
-            'tests/rke/resources/k8s_ymls/single_pod.yml',
+            k8s_resurce_dir + 'single_pod.yml',
             namespace=self.namespace)
-        assert result.ok, result.stderr
+
 
     def validate(self):
         # wait for exec pod to be ready before validating
@@ -358,17 +357,19 @@ class DNSServiceDiscoveryValidation(object):
             expected_ip = dns_info['ip']
             cmd = 'dig {0} +short'.format(dns_record)
             result = self.kubectl.exec_cmd(exec_pod_name, cmd, self.namespace)
-            assert expected_ip in result.stdout, (
+            assert expected_ip in result, (
                 "Unable to test DNS resolution for service {0}: {1}".format(
                     dns_record, result.stderr))
 
             # Check Cluster IP reaches pods in service
             pods_names = dns_info['pods']
-            cmd = 'curl "http://{0}/hostname"'.format(dns_record)
+            cmd = 'curl "http://{0}/name.html"'.format(dns_record)
             result = self.kubectl.exec_cmd(exec_pod_name, cmd, self.namespace)
-            assert result.stdout in pods_names, (
-                "Service ClusterIP does not reach pods {0}: {1}".format(
-                    dns_record, result.stderr))
+            print(result)
+            print (pods_names)
+            assert result.rstrip() in pods_names, (
+                "Service ClusterIP does not reach pods {0}".format(
+                    dns_record))
 
     def teardown(self):
         self.kubectl.delete_resourse(

@@ -62,7 +62,7 @@ def test_install_config_5(test_name, cloud_provider, rke_client, kubectl):
     nodes = cloud_provider.create_multiple_nodes(3, test_name)
     create_and_validate(
         cloud_provider, rke_client, kubectl, rke_template, nodes,
-        remove_nodes=True)
+        remove_nodes=True, etcd_private_ip=True)
 
 
 def test_install_config_6(test_name, cloud_provider, rke_client, kubectl):
@@ -76,7 +76,7 @@ def test_install_config_6(test_name, cloud_provider, rke_client, kubectl):
         node.node_name = node.host_name
     create_and_validate(
         cloud_provider, rke_client, kubectl, rke_template, nodes,
-        remove_nodes=True)
+        remove_nodes=True, etcd_private_ip=True)
 
 
 def test_install_config_7(test_name, cloud_provider, rke_client, kubectl):
@@ -92,7 +92,7 @@ def test_install_config_7(test_name, cloud_provider, rke_client, kubectl):
         index += 1
     create_and_validate(
         cloud_provider, rke_client, kubectl, rke_template, nodes,
-        remove_nodes=True)
+        remove_nodes=True, etcd_private_ip=True)
 
 
 def test_install_config_8(test_name, cloud_provider, rke_client, kubectl):
