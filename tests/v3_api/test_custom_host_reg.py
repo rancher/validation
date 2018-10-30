@@ -64,6 +64,29 @@ def test_deploy_rancher_server():
     create_config_file(env_details)
 
 
+def test_delete_rancher_server():
+    client = get_admin_client()
+    clusters = client.list_cluster().data
+    for cluster in clusters:
+        delete_cluster(client, cluster)
+    clusters = client.list_cluster().data
+    start = time.time()
+    while len(clusters) > 0:
+        time.sleep(30)
+        clusters = client.list_cluster().data
+        if time.time() - start > MACHINE_TIMEOUT:
+            exceptionMsg = 'Timeout waiting for clusters to be removed'
+            raise Exception(exceptionMsg)
+    ip_address = CATTLE_TEST_URL[8:]
+    print ("Ip Address:" + ip_address)
+    filters = [
+        {'Name': 'network-interface.addresses.association.public-ip',
+         'Values': [ip_address]}]
+    aws_nodes = AmazonWebServices().get_nodes(filters)
+    assert len(aws_nodes) == 1
+    AmazonWebServices().delete_nodes(aws_nodes)
+
+
 def get_admin_token(RANCHER_SERVER_URL):
     """Returns a ManagementContext for the default global admin user."""
     CATTLE_AUTH_URL = \
