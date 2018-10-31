@@ -131,7 +131,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
           stage('Test Report') {
             // copy and archive test results
             sh "docker cp ${setupContainer}:${rootPath}${setupResultsOut} ."
-            sh "docker cp ${setupContainer}:${rootPath}${deleteResultsOut} ."
+            sh "docker cp ${deleteContainer}:${rootPath}${deleteResultsOut} ."
             step([$class: 'JUnitResultArchiver', testResults: "**/${setupResultsOut}"])
             step([$class: 'JUnitResultArchiver', testResults: "**/${deleteResultsOut}"])
             sh "docker stop ${setupContainer}"
