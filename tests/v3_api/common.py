@@ -88,7 +88,7 @@ def wait_for_condition(client, resource, check_function, fail_handler=None,
             exceptionMsg = 'Timeout waiting for ' + resource.baseType + \
                 ' to satisfy condition: ' + \
                 inspect.getsource(check_function)
-            if (fail_handler):
+            if fail_handler:
                 exceptionMsg = exceptionMsg + fail_handler(resource)
             raise Exception(exceptionMsg)
         time.sleep(.5)
