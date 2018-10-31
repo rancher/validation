@@ -54,7 +54,7 @@ class CloudProviderBase(object, metaclass=abc.ABCMeta):
         return public_ssh_key
 
     def get_ssh_key(self, ssh_key_name):
-        with open('.ssh/{}'.format(ssh_key_name), 'r') as f:
+        with open(self.get_ssh_key_path(ssh_key_name), 'r') as f:
             ssh_key = f.read()
         return ssh_key
 
