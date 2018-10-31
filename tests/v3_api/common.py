@@ -611,19 +611,47 @@ def validate_dns_entry(pod, host, expected):
         assert expected_value in str(dig_output)
 
 
-def wait_for_nodes_to_become_active(client, cluster, exception_list=[]):
+def wait_for_nodes_to_become_active(client, cluster, exception_list=[],
+                                    retry_count=0):
     nodes = client.list_node(clusterId=cluster.id).data
+    node_auto_deleted = False
     for node in nodes:
         if node.requestedHostname not in exception_list:
-            wait_for_node_status(client, node, "active")
+            node = wait_for_node_status(client, node, "active")
+            if node is None:
+                print("Need to re-evalauate new node list")
+                node_auto_deleted = True
+                retry_count += 1
+                print("Retry Count:" + str(retry_count))
+    if node_auto_deleted and retry_count < 5:
+        wait_for_nodes_to_become_active(client, cluster, exception_list,
+                                        retry_count)
 
 
 def wait_for_node_status(client, node, state):
-    node = wait_for_condition(
-        client, node,
-        lambda x: x.state == state,
-        lambda x: 'State is: ' + x.state,
-        timeout=MACHINE_TIMEOUT)
+    uuid = node.uuid
+    start = time.time()
+    nodes = client.list_node(uuid=uuid).data
+    node_count = len(nodes)
+    # Handle the case of nodes getting auto deleted when they are part of
+    # nodepools
+    if node_count == 1:
+        node_status = nodes[0].state
+    else:
+        print("Node does not exist anymore -" + uuid)
+        return None
+    while node_status != state:
+        if time.time() - start > MACHINE_TIMEOUT:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(5)
+        nodes = client.list_node(uuid=uuid).data
+        node_count = len(nodes)
+        if node_count == 1:
+            node_status = nodes[0].state
+        else:
+            print("Node does not exist anymore -" + uuid)
+            return None
     return node
 
 
