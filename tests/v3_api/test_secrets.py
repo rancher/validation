@@ -193,9 +193,10 @@ def create_project_client(request):
 def validate_workload_with_secret(p_client, workload,
                                   type, ns_name, keyvaluepair,
                                   workloadwithsecretasVolume=False,
-                                  workloadwithsecretasenvvar=False):
+                                  workloadwithsecretasenvvar=False,
+                                  podcount=1):
 
-    validate_workload(p_client, workload, type, ns_name, pod_count=1)
+    validate_workload(p_client, workload, type, ns_name, pod_count=podcount)
 
     pod_list = p_client.list_pod(workloadId=workload.id).data
     mountpath = "/test"

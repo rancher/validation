@@ -1,11 +1,12 @@
 import base64
-import ast
 import pytest
+
 
 from .common import *  # NOQA
 from .test_secrets import (
     create_and_validate_workload_with_secret_as_env_variable,
     create_and_validate_workload_with_secret_as_volume,
+    validate_workload_with_secret,
     create_secret)
 from .test_service_discovery import create_dns_record
 
@@ -18,6 +19,9 @@ namespace = {"p_client": None, "ns": None, "cluster": None, "project": None,
 upgrade_check_stage = os.environ.get('RANCHER_UPGRADE_CHECK', "preupgrade")
 validate_ingress = \
     ast.literal_eval(os.environ.get('RANCHER_INGRESS_CHECK', "True"))
+
+value = base64.b64encode(b"valueall")
+keyvaluepair = {"testall": value.decode('utf-8')}
 
 wl_name = "-testwl"
 sd_name = "-testsd"
@@ -50,6 +54,14 @@ ingress_name2_validate = validate_prefix + ingress_name2
 ingress_wlname1_validate = validate_prefix + ingress_wlname1
 ingress_wlname2_validate = validate_prefix + ingress_wlname2
 
+secret_name = create_prefix + "-testsecret"
+secret_wl_name1_create = create_prefix + "-testwl1withsec"
+secret_wl_name2_create = create_prefix + "-testwl2withsec"
+
+secret_wl_name1_validate = validate_prefix + "-testwl1withsec"
+secret_wl_name2_validate = validate_prefix + "-testwl2withsec"
+
+
 if_post_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "postupgrade",
     reason='This test is not executed for PreUpgrade checks')
@@ -62,13 +74,14 @@ if_pre_upgrade = pytest.mark.skipif(
 def test_upgrade_create_and_validate_resources():
     create_and_validate_wl()
     create_and_validate_service_discovery()
-    create_wokloads_with_secret()
+    create_validate_wokloads_with_secret()
     if validate_ingress:
         create_and_validate_ingress_xip_io()
 
 
 @if_post_upgrade
 def test_upgrade_validate_resources():
+
     # Validate existing resources
     validate_wl(wl_name_validate)
     validate_service_discovery(sd_name_validate,
@@ -78,11 +91,15 @@ def test_upgrade_validate_resources():
                                 ingress_wlname1_validate)
         validate_ingress_xip_io(ingress_name2_validate,
                                 ingress_wlname2_validate)
+
+    validate_worklaods_with_secret(
+        secret_wl_name1_validate, secret_wl_name2_validate)
+    modify_resources_validate()
     # Create and validate new resources
     create_project_resources()
     create_and_validate_wl()
     create_and_validate_service_discovery()
-    create_wokloads_with_secret()
+    create_validate_wokloads_with_secret()
     if validate_ingress:
         create_and_validate_ingress_xip_io()
 
@@ -97,14 +114,15 @@ def create_and_validate_wl():
     validate_wl(wl_name_create)
 
 
-def validate_wl(workload_name):
+def validate_wl(workload_name, pod_count=2):
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     workloads = p_client.list_workload(name=workload_name,
                                        namespaceId=ns.id).data
     assert len(workloads) == 1
     workload = workloads[0]
-    validate_workload(p_client, workload, "deployment", ns.name, pod_count=2)
+    validate_workload(
+        p_client, workload, "deployment", ns.name, pod_count=pod_count)
     validate_service_discovery(workload_name, [workload_name])
 
 
@@ -135,7 +153,7 @@ def create_and_validate_ingress_xip_io():
     workload = p_client.create_workload(name=ingress_wlname2_create,
                                         containers=con,
                                         namespaceId=ns.id, scale=2)
-    validate_wl(ingress_wlname2_create)
+    validate_wl(ingress_wlname2_create, 2)
     path = "/name.html"
     rule = {"host": "xip.io",
             "paths":
@@ -144,6 +162,89 @@ def create_and_validate_ingress_xip_io():
                             namespaceId=ns.id,
                             rules=[rule])
     validate_ingress_xip_io(ingress_name2_create, ingress_wlname2_create)
+
+
+def modify_resources_validate():
+
+    # Modify various resources and validate
+    modify_workload_validate_deployment()
+    modify_workload_validate_sd()
+    modify_workload_validate_ingress()
+    modify_workload_validate_secret()
+
+
+def modify_workload_validate_deployment():
+
+    # This method increments the deployment scale and validates it
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+
+    workload = p_client.list_workload(
+        name=wl_name_validate, namespace=validate_prefix + ns.id).data[0]
+    p_client.update(workload, scale=4)
+    validate_wl(wl_name_validate, 4)
+
+
+def modify_workload_validate_ingress():
+
+    # This method increments the workload scale and validates the ingress
+    # pointing to it
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+
+    # Get workload and update
+    ing_workload = p_client.list_workload(
+        name=ingress_wlname2_validate, namespace=ns.id).data[0]
+    print(ing_workload)
+    # Increment workload
+    ing_workload = p_client.update(ing_workload, scale=4)
+    wait_for_pods_in_workload(p_client, ing_workload, 4)
+    validate_wl(ing_workload.name, 4)
+
+    # Validate ingress after workload scale up
+    validate_ingress_xip_io(ingress_name2_validate, ingress_wlname2_validate)
+
+
+def modify_workload_validate_sd():
+
+    # This method increments the workload scale and validates
+    # service discovery
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    # Get sd workloads and validate service discovery
+    sd_workload = p_client.list_workload(
+        name=sd_wlname2_validate, namespace=ns.id).data[0]
+    p_client.update(sd_workload, scale=3)
+    validate_wl(sd_wlname2_validate, 3)
+
+    validate_service_discovery(sd_name_validate,
+                               [sd_wlname1_validate, sd_wlname2_validate])
+
+
+def modify_workload_validate_secret():
+
+    # This method increments the scale of worlkoad with secret and validates it
+
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+
+    secret_workload1 = p_client.list_workload(
+        name=secret_wl_name1_validate, namespace=ns.id).data[0]
+
+    secret_workload1 = p_client.update(secret_workload1, scale=3)
+    wait_for_pods_in_workload(p_client, secret_workload1, 3)
+    validate_workload_with_secret(
+        p_client, secret_workload1, "deployment", ns.name,
+        keyvaluepair, workloadwithsecretasVolume=True, podcount=3)
+
+    secret_workload2 = p_client.list_workload(name=secret_wl_name2_validate,
+                                              namespace=ns.id).data[0]
+
+    secret_workload2 = p_client.update(secret_workload2, scale=3)
+    wait_for_pods_in_workload(p_client, secret_workload2, 3)
+    validate_workload_with_secret(
+        p_client, secret_workload2, "deployment", ns.name,
+        keyvaluepair, workloadwithsecretasenvvar=True, podcount=3)
 
 
 def validate_ingress_xip_io(ing_name, workload_name):
@@ -221,28 +322,21 @@ def validate_service_discovery(sd_record_name, workload_names):
         validate_dns_record(pod, record, expected_ips)
 
 
-def create_wokloads_with_secret():
-    value = base64.b64encode(b"valueall")
-    keyvaluepair = {"testall": value.decode('utf-8')}
+def create_validate_wokloads_with_secret():
 
     p_client = namespace["p_client"]
     ns = namespace["ns"]
 
     secret_name = create_prefix + "-testsecret"
-    wl_name_create1 = create_prefix + "-testwl1withsec"
-    wl_name_create2 = create_prefix + "-testwl2withsec"
+
+    secret_wl_name_create1 = create_prefix + "-testwl1withsec"
+    secret_wl_name_create2 = create_prefix + "-testwl2withsec"
 
     secret = create_secret(keyvaluepair, p_client=p_client, name=secret_name)
-    create_and_validate_workload_with_secret_as_volume(p_client,
-                                                       secret,
-                                                       ns,
-                                                       keyvaluepair,
-                                                       name=wl_name_create1)
-    create_and_validate_workload_with_secret_as_env_variable(p_client,
-                                                             secret,
-                                                             ns,
-                                                             keyvaluepair,
-                                                             wl_name_create2)
+    create_and_validate_workload_with_secret_as_volume(
+        p_client, secret, ns, keyvaluepair, name=secret_wl_name_create1)
+    create_and_validate_workload_with_secret_as_env_variable(
+        p_client, secret, ns, keyvaluepair, name=secret_wl_name_create2)
 
 
 @pytest.fixture(scope='module', autouse="True")
@@ -351,3 +445,17 @@ def validate_existing_project_resources():
     namespace["ns"] = ns
     namespace["project"] = project
     namespace["testclient_pods"] = [wl1_pods[0], wl2_pods[0]]
+
+
+def validate_worklaods_with_secret(workload_name1, workload_name2):
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+
+    wk1 = p_client.list_workload(name=workload_name1, namespace=ns.id).data[0]
+    wk2 = p_client.list_workload(name=workload_name2, namespace=ns.id).data[0]
+    validate_workload_with_secret(
+        p_client, wk1, "deployment", ns.name, keyvaluepair,
+        workloadwithsecretasVolume=True)
+    validate_workload_with_secret(
+        p_client, wk2, "deployment", ns.name, keyvaluepair,
+        workloadwithsecretasenvvar=True)
