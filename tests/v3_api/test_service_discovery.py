@@ -52,6 +52,7 @@ def update_and_validate_workload(workload, con, scale, p_client=None, ns=None):
         ns = namespace["ns"]
 
     p_client.update(workload, containers=con, scale=scale)
+    workload = wait_for_wl_to_active(p_client, workload)
     wait_for_pod_images(p_client, workload, ns.name, con[0]["image"], scale)
     wait_for_pods_in_workload(p_client, workload, scale)
     validate_workload(p_client, workload, "deployment", ns.name, scale)
@@ -89,8 +90,7 @@ def test_service_discovery_when_workload_scale_up():
 
     # workload scales up to 3 pods
     scale = 3
-    p_client.update(workload, scale=scale, containers=con)
-    wait_for_pods_in_workload(p_client, workload, scale)
+    update_and_validate_workload(workload, con, scale)
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
     validate_service_discovery(workload, scale)
@@ -112,9 +112,7 @@ def test_service_discovery_when_workload_scale_down():
 
     # workload scale down to 2 pods
     scale = 2
-    p_client.update(workload, scale=scale, containers=con)
-    wait_for_pods_in_workload(p_client, workload, scale)
-    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+    update_and_validate_workload(workload, con, scale)
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
     validate_service_discovery(workload, scale)
@@ -168,9 +166,7 @@ def test_dns_record_type_workload_when_workload_scale_up():
 
     # workload scale up to 3 pods
     scale = 3
-    p_client.update(workload, scale=scale, containers=con)
-    wait_for_pods_in_workload(p_client, workload, scale)
-    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+    update_and_validate_workload(workload, con, scale)
 
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
@@ -198,9 +194,7 @@ def test_dns_record_type_workload_when_workload_scale_down():
 
     # workload scale down to 2 pods
     scale = 2
-    p_client.update(workload, scale=scale, containers=con)
-    wait_for_pods_in_workload(p_client, workload, scale)
-    validate_workload(p_client, workload, type, ns.name, pod_count=scale)
+    update_and_validate_workload(workload, con, scale)
 
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
