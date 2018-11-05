@@ -256,20 +256,7 @@ def test_wl_with_hostPort():
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     workload = wait_for_wl_to_active(p_client, workload)
-    nodes = get_schedulable_nodes(namespace["cluster"])
-    pods = p_client.list_pod(workloadId=workload.id).data
-    for node in nodes:
-        target_name_list = []
-        for pod in pods:
-            print(pod.nodeId + " check " + node.id)
-            if pod.nodeId == node.id:
-                target_name_list.append(pod.name)
-                break
-        host_ip = node.externalIpAddress
-        curl_cmd = " http://" + host_ip + ":" + \
-                   str(source_port) + "/name.html"
-        print("target name list:" + str(target_name_list))
-        validate_http_response(curl_cmd, target_name_list)
+    validate_hostPort(p_client, workload, source_port, namespace["cluster"])
 
 
 def test_wl_with_nodePort():
@@ -290,18 +277,7 @@ def test_wl_with_nodePort():
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     workload = wait_for_wl_to_active(p_client, workload)
-    source_port = workload.publicEndpoints[0]["port"]
-    nodes = get_schedulable_nodes(namespace["cluster"])
-    pods = p_client.list_pod(workloadId=workload.id).data
-    target_name_list = []
-    for pod in pods:
-        target_name_list.append(pod.name)
-    print("target name list:" + str(target_name_list))
-    for node in nodes:
-        host_ip = node.externalIpAddress
-        curl_cmd = " http://" + host_ip + ":" + \
-                   str(source_port) + "/name.html"
-        validate_http_response(curl_cmd, target_name_list)
+    validate_nodePort(p_client, workload, namespace["cluster"])
 
 
 def test_wl_with_clusterIp():
@@ -321,10 +297,6 @@ def test_wl_with_clusterIp():
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     workload = wait_for_wl_to_active(p_client, workload)
-    pods = p_client.list_pod(workloadId=workload["id"]).data
-    target_name_list = []
-    for pod in pods:
-        target_name_list.append(pod["name"])
 
     # Get cluster Ip
     sd_records = p_client.list_dns_record(name=name).data
@@ -336,15 +308,13 @@ def test_wl_with_clusterIp():
     con = [{"name": "test1",
             "image": TEST_CLIENT_IMAGE}]
 
-    workload = p_client.create_workload(name=wlname,
+    workload_for_test = p_client.create_workload(name=wlname,
                                         containers=con,
                                         namespaceId=ns.id,
                                         scale=2)
-    wait_for_wl_to_active(p_client, workload)
-    pods = wait_for_pods_in_workload(p_client, workload, 2)
-    curl_cmd = "http://" + cluster_ip + "/name.html"
-    for pod in pods:
-        validate_http_response(curl_cmd, target_name_list, pod)
+    wait_for_wl_to_active(p_client, workload_for_test)
+    test_pods = wait_for_pods_in_workload(p_client, workload_for_test, 2)
+    validate_clusterIp(p_client, workload, cluster_ip, test_pods)
 
 
 @if_check_lb
@@ -366,10 +336,194 @@ def test_wl_with_lb():
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
     workload = wait_for_wl_to_active(p_client, workload)
-    url = get_endpoint_url_for_workload(p_client, workload)
-    target_name_list = get_target_names(p_client, [workload])
-    wait_until_lb_is_active(url)
-    validate_http_response(url+"/name.html", target_name_list)
+    validate_lb(p_client, workload)
+
+
+def test_wl_with_clusterIp_sacle_and_upgrade():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    port = {"containerPort": "80",
+            "type": "containerPort",
+            "kind": "ClusterIP",
+            "protocol": "TCP"}
+    con = [{"name": "test-cluster-ip",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    name = random_test_name("cluster-ip-scale-upgrade")
+    workload = p_client.create_workload(name=name,
+                                        containers=con,
+                                        namespaceId=ns.id,
+                                        scale=1)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    sd_records = p_client.list_dns_record(name=name).data
+    assert len(sd_records) == 1
+    cluster_ip = sd_records[0].clusterIp
+    # get test pods
+    wlname = random_test_name("testclusterip-client")
+    wl_con = [{"name": "test1",
+            "image": TEST_CLIENT_IMAGE}]
+    workload_for_test = p_client.create_workload(name=wlname,
+                                        containers=wl_con,
+                                        namespaceId=ns.id,
+                                        scale=2)
+    wait_for_wl_to_active(p_client, workload_for_test)
+    test_pods = wait_for_pods_in_workload(p_client, workload_for_test, 2)
+    validate_clusterIp(p_client, workload, cluster_ip, test_pods)
+
+    # scale up
+    p_client.update(workload, scale=3, caontainers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 3)
+    validate_clusterIp(p_client, workload, cluster_ip, test_pods)
+
+    # scale down
+    p_client.update(workload, scale=2, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_clusterIp(p_client, workload, cluster_ip, test_pods)
+    # upgrade
+    con = [{"name": "test-cluster-ip-upgrade-new",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    p_client.update(workload, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_clusterIp(p_client, workload, cluster_ip, test_pods)
+
+
+def test_wl_with_nodePort_sacle_and_upgrade():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    port = {"containerPort": 80,
+            "type": "containerPort",
+            "kind": "NodePort",
+            "protocol": "TCP",
+            "sourcePort": 0}
+    con = [{"name": "test1",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    name = random_test_name("test-node-port-scale-upgrade")
+    workload = p_client.create_workload(name=name,
+                                        containers=con,
+                                        namespaceId=ns.id,
+                                        scale=1)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    validate_nodePort(p_client, workload, namespace["cluster"])
+
+    # scale up
+    p_client.update(workload, scale=3, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 3)
+    validate_nodePort(p_client, workload, namespace["cluster"])
+
+    # scale down
+    p_client.update(workload, scale=2, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_nodePort(p_client, workload, namespace["cluster"])
+
+    # upgrade
+    con = [{"name": "test-node-port-scale-upgrade-new",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    p_client.update(workload, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_nodePort(p_client, workload, namespace["cluster"])
+
+
+def test_wl_with_hostPort_sacle_and_upgrade():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    source_port = 8888
+    port = {"containerPort": 80,
+            "type": "containerPort",
+            "kind": "HostPort",
+            "protocol": "TCP",
+            "sourcePort": source_port}
+    con = [{"name": "test-host-port-upgrade",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    name = random_test_name("hostport-scale")
+
+    workload = p_client.create_workload(name=name,
+                                        containers=con,
+                                        namespaceId=ns.id,
+                                        scale=1)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    validate_hostPort(p_client, workload, source_port, namespace["cluster"])
+
+    # scale up
+    p_client.update(workload, scale=2, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_hostPort(p_client, workload, source_port, namespace["cluster"])
+
+    # scale down
+    p_client.update(workload, scale=1, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    validate_hostPort(p_client, workload, source_port, namespace["cluster"])
+    # From my observation, it is necessary to wait until
+    # the number of pod equals to the expected number,
+    # since the workload's state is 'active' but pods
+    # are not ready yet especially after scaling down and upgrading.
+
+    # upgrade
+    con = [{"name": "test-host-port-upgrade-new",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    p_client.update(workload, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    validate_hostPort(p_client, workload, source_port, namespace["cluster"])
+
+
+@if_check_lb
+def test_wl_with_lb_sacle_and_upgrade():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    port = {"containerPort": 80,
+            "type": "containerPort",
+            "kind": "LoadBalancer",
+            "protocol": "TCP",
+            "sourcePort": 9001}
+    con = [{"name": "test1",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    name = random_test_name("lb-scale-upgrade")
+
+    workload = p_client.create_workload(name=name,
+                                        containers=con,
+                                        namespaceId=ns.id,
+                                        scale=1)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 1)
+    validate_lb(p_client, workload)
+
+    # scale up
+    p_client.update(workload, scale=3, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 3)
+    validate_lb(p_client, workload)
+
+    # scale down
+    p_client.update(workload, scale=2, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_lb(p_client, workload)
+
+    # upgrade
+    con = [{"name": "test-load-balance-upgrade-new",
+            "image": TEST_TARGET_IMAGE,
+            "ports": [port]}]
+    p_client.update(workload, containers=con)
+    workload = wait_for_wl_to_active(p_client, workload)
+    wait_for_pods_in_workload(p_client, workload, 2)
+    validate_lb(p_client, workload)
 
 
 @pytest.fixture(scope='module', autouse="True")

@@ -924,3 +924,51 @@ def create_config_file(env_details):
         file = open(env_file, "w")
         file.write(env_details)
         file.close()
+
+
+def validate_hostPort(p_client, workload, source_port, cluster):
+    pods = p_client.list_pod(workloadId=workload.id).data
+    nodes = get_schedulable_nodes(cluster)
+    for node in nodes:
+        target_name_list = []
+        for pod in pods:
+            print(pod.nodeId + " check " + node.id)
+            if pod.nodeId == node.id:
+                target_name_list.append(pod.name)
+                break
+        host_ip = node.externalIpAddress
+        curl_cmd = " http://" + host_ip + ":" + \
+                   str(source_port) + "/name.html"
+        validate_http_response(curl_cmd, target_name_list)
+
+
+def validate_lb(p_client, workload):
+    url = get_endpoint_url_for_workload(p_client, workload)
+    target_name_list = get_target_names(p_client, [workload])
+    wait_until_lb_is_active(url)
+    validate_http_response(url + "/name.html", target_name_list)
+
+
+def validate_nodePort(p_client, workload, cluster):
+    source_port = workload.publicEndpoints[0]["port"]
+    nodes = get_schedulable_nodes(cluster)
+    pods = p_client.list_pod(workloadId=workload.id).data
+    target_name_list = []
+    for pod in pods:
+        target_name_list.append(pod.name)
+    print("target name list:" + str(target_name_list))
+    for node in nodes:
+        host_ip = node.externalIpAddress
+        curl_cmd = " http://" + host_ip + ":" + \
+                   str(source_port) + "/name.html"
+        validate_http_response(curl_cmd, target_name_list)
+
+
+def validate_clusterIp(p_client, workload, cluster_ip, test_pods):
+    pods = p_client.list_pod(workloadId=workload.id).data
+    target_name_list = []
+    for pod in pods:
+        target_name_list.append(pod["name"])
+    curl_cmd = "http://" + cluster_ip + "/name.html"
+    for pod in test_pods:
+        validate_http_response(curl_cmd, target_name_list, pod)
