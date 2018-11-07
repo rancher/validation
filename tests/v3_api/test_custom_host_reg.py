@@ -13,6 +13,7 @@ rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               }
 AUTO_DEPLOY_CUSTOM_CLUSTER = ast.literal_eval(
     os.environ.get('RANCHER_AUTO_DEPLOY_CUSTOM_CLUSTER', "True"))
+KEYPAIR_NAME_PREFIX = os.environ.get('RANCHER_KEYPAIR_NAME_PREFIX', "")
 
 
 def test_add_custom_host():
@@ -21,6 +22,10 @@ def test_add_custom_host():
     if AGENT_REG_CMD != "":
         for aws_node in aws_nodes:
             aws_node.execute_command(AGENT_REG_CMD)
+
+
+def test_delete_keypair():
+    AmazonWebServices().delete_keypairs(KEYPAIR_NAME_PREFIX)
 
 
 def test_deploy_rancher_server():
@@ -78,7 +83,7 @@ def test_delete_rancher_server():
             exceptionMsg = 'Timeout waiting for clusters to be removed'
             raise Exception(exceptionMsg)
     ip_address = CATTLE_TEST_URL[8:]
-    print ("Ip Address:" + ip_address)
+    print("Ip Address:" + ip_address)
     filters = [
         {'Name': 'network-interface.addresses.association.public-ip',
          'Values': [ip_address]}]

@@ -315,3 +315,15 @@ class AmazonWebServices(CloudProviderBase):
         if wait_for_deleted:
             for node in nodes:
                 node = self.wait_for_node_state(node, 'terminated')
+
+    def delete_keypairs(self, name_prefix):
+        if len(name_prefix) > 0:
+            key_pairs = self._client.describe_key_pairs()
+            print(key_pairs["KeyPairs"])
+            key_pair_list = key_pairs["KeyPairs"]
+            print(len(key_pair_list))
+            for key in key_pair_list:
+                keyName = key["KeyName"]
+                if keyName.startswith(name_prefix):
+                    print(keyName)
+                    self._client.delete_key_pair(KeyName=keyName)
