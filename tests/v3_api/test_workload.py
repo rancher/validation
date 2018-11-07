@@ -309,9 +309,9 @@ def test_wl_with_clusterIp():
             "image": TEST_CLIENT_IMAGE}]
 
     workload_for_test = p_client.create_workload(name=wlname,
-                                        containers=con,
-                                        namespaceId=ns.id,
-                                        scale=2)
+                                                 containers=con,
+                                                 namespaceId=ns.id,
+                                                 scale=2)
     wait_for_wl_to_active(p_client, workload_for_test)
     test_pods = wait_for_pods_in_workload(p_client, workload_for_test, 2)
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)
@@ -361,12 +361,11 @@ def test_wl_with_clusterIp_sacle_and_upgrade():
     cluster_ip = sd_records[0].clusterIp
     # get test pods
     wlname = random_test_name("testclusterip-client")
-    wl_con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+    wl_con = [{"name": "test1", "image": TEST_CLIENT_IMAGE}]
     workload_for_test = p_client.create_workload(name=wlname,
-                                        containers=wl_con,
-                                        namespaceId=ns.id,
-                                        scale=2)
+                                                 containers=wl_con,
+                                                 namespaceId=ns.id,
+                                                 scale=2)
     wait_for_wl_to_active(p_client, workload_for_test)
     test_pods = wait_for_pods_in_workload(p_client, workload_for_test, 2)
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)

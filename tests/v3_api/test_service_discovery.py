@@ -76,7 +76,6 @@ def validate_dns_record_for_workload(workload, scale, record,
 
 
 def test_service_discovery_when_workload_scale_up():
-    p_client = namespace["p_client"]
     con = [{"name": "test1",
             "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("test-sd-up")
@@ -97,8 +96,6 @@ def test_service_discovery_when_workload_scale_up():
 
 
 def test_service_discovery_when_workload_scale_down():
-    p_client = namespace["p_client"]
-    ns = namespace["ns"]
     con = [{"name": "test1",
             "image": TEST_CLIENT_IMAGE}]
     name = random_test_name("test-sd-dw")
