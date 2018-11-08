@@ -1,4 +1,10 @@
 jobs = [:]
+def deleteContainer = "${JOB_NAME}${env.BUILD_NUMBER}_delete"
+def deletePytestOptions = "-k test_delete_rancher_server"
+def deleteResultsOut = "delete-results.xml"
+def testsDir = "tests/v3_api/"
+def imageName = "rancher-validation-tests"
+def envFile = ".env"
 
 node {
     wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
@@ -28,9 +34,26 @@ node {
                 jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }
                 jobs["ec2"] = { build job: 'v3_test_ec2_cluster', parameters: params }
                 jobs["az"] = { build job: 'v3_test_az_cluster', parameters: params }
+                jobs["imported"] = { build job: 'v3_test_imported_cluster', parameters: params }
 
                 parallel jobs
             }
+
+            stage('Delete Rancher Server') {
+            try {
+              if (env.RANCHER_DELETE_SERVER.toLowerCase() == "true") {
+                sleep(time: env.RANCHER_DELETE_DELAY.toInteger(), unit: "HOURS")
+                sh "docker run --name ${deleteContainer} -t --env-file ${envFile} " +
+                 "${imageName} /bin/bash -c \'export CATTLE_TEST_URL=${env.CATTLE_TEST_URL} && " +
+                 "export ADMIN_TOKEN=${env.ADMIN_TOKEN} && pytest -v -s --junit-xml=${deleteResultsOut} " +
+                 "${deletePytestOptions} ${testsDir}\'"
+              }
+            } catch(err) {
+              echo "Error: " + err
+              error()
+              currentBuild.result = 'FAILURE'
+            }
+          }
 
             // collect results
 
