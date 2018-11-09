@@ -38,7 +38,7 @@ rke_config = {
             "extraArgs":
                 {"heartbeat-interval": 500,
                  "election-timeout": 5000},
-            "snapshot": False,
+            "snapshot": True,
             "type": "etcdService"},
         "kubeApi": {
             "podSecurityPolicy": False,
