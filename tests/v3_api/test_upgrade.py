@@ -169,7 +169,8 @@ def modify_resources_validate():
     # Modify various resources and validate
     modify_workload_validate_deployment()
     modify_workload_validate_sd()
-    modify_workload_validate_ingress()
+    if validate_ingress:
+        modify_workload_validate_ingress()
     modify_workload_validate_secret()
 
 
