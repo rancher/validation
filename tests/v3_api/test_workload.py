@@ -9,6 +9,13 @@ if_check_lb = pytest.mark.skipif(
     if_check_lb != "True",
     reason='Lb test case skipped')
 
+SKIP_HOST_NODE_PORT_TESTS = ast.literal_eval(
+    os.environ.get('RANCHER_SKIP_HOST_NODE_PORT_TESTS', "True"))
+
+skip_host_node_port = pytest.mark.skipif(not (SKIP_HOST_NODE_PORT_TESTS),
+                                   reason='Tests Skipped for AKS,GKE,EKS '
+                                          'Clusters')
+
 
 def test_wl_sidekick():
     p_client = namespace["p_client"]
@@ -236,7 +243,7 @@ def test_wl_pause_orchestration():
     validate_workload_paused(p_client, workload, False)
     validate_pod_images("nginx", workload, ns.name)
 
-
+@skip_host_node_port
 def test_wl_with_hostPort():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
@@ -259,6 +266,7 @@ def test_wl_with_hostPort():
     validate_hostPort(p_client, workload, source_port, namespace["cluster"])
 
 
+@skip_host_node_port
 def test_wl_with_nodePort():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
@@ -339,7 +347,7 @@ def test_wl_with_lb():
     validate_lb(p_client, workload)
 
 
-def test_wl_with_clusterIp_sacle_and_upgrade():
+def test_wl_with_clusterIp_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     port = {"containerPort": "80",
@@ -391,7 +399,8 @@ def test_wl_with_clusterIp_sacle_and_upgrade():
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)
 
 
-def test_wl_with_nodePort_sacle_and_upgrade():
+@skip_host_node_port
+def test_wl_with_nodePort_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     port = {"containerPort": 80,
@@ -433,7 +442,8 @@ def test_wl_with_nodePort_sacle_and_upgrade():
     validate_nodePort(p_client, workload, namespace["cluster"])
 
 
-def test_wl_with_hostPort_sacle_and_upgrade():
+@skip_host_node_port
+def test_wl_with_hostPort_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     source_port = 8888
@@ -482,7 +492,7 @@ def test_wl_with_hostPort_sacle_and_upgrade():
 
 
 @if_check_lb
-def test_wl_with_lb_sacle_and_upgrade():
+def test_wl_with_lb_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     port = {"containerPort": 80,
