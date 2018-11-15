@@ -9,10 +9,10 @@ if_check_lb = pytest.mark.skipif(
     if_check_lb != "True",
     reason='Lb test case skipped')
 
-SKIP_HOST_NODE_PORT_TESTS = ast.literal_eval(
-    os.environ.get('RANCHER_SKIP_HOST_NODE_PORT_TESTS', "True"))
+ENABLE_HOST_NODE_PORT_TESTS = ast.literal_eval(
+    os.environ.get('RANCHER_ENABLE_HOST_NODE_PORT_TESTS', "True"))
 
-skip_host_node_port = pytest.mark.skipif(not (SKIP_HOST_NODE_PORT_TESTS),
+skip_host_node_port = pytest.mark.skipif(not (ENABLE_HOST_NODE_PORT_TESTS),
                                    reason='Tests Skipped for AKS,GKE,EKS '
                                           'Clusters')
 
