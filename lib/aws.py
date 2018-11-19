@@ -13,8 +13,8 @@ logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
 AWS_REGION = 'us-east-2'
 AWS_REGION_AZ = 'us-east-2a'
-AWS_SECURITY_GROUPS = os.environ.get("AWS_SECURITY_GROUPS",
-                                     'sg-0e753fd5550206e55')
+AWS_SECURITY_GROUP = os.environ.get("AWS_SECURITY_GROUPS", 'sg-3076bd59')
+AWS_SECURITY_GROUPS = [AWS_SECURITY_GROUP]
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
 AWS_SSH_KEY_NAME = os.environ.get("AWS_SSH_KEY_NAME")
