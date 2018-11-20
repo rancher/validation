@@ -253,7 +253,8 @@ def test_rke_custom_host_stress():
                                              aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
-    cluster = validate_cluster(client, cluster)
+    cluster = validate_cluster(client, cluster,
+                               check_intermediate_state=False)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
