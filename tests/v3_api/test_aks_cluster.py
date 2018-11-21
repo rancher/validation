@@ -2,7 +2,7 @@ from .common import *   # NOQA
 import pytest
 import requests
 
-AKS_CLUSTER_VERSION = os.environ.get('RANCHER_AKS_CLUSTER_VERSION', '1.11.2')
+AKS_CLUSTER_VERSION = os.environ.get('RANCHER_AKS_CLUSTER_VERSION', '')
 SSH_KEY = os.environ.get('RANCHER_SSH_KEY', "")
 SUBSCRIPTION_ID = os.environ.get('RANCHER_AKS_SUBSCRIPTION_ID', '')
 TENANT_ID = os.environ.get('RANCHER_AKS_TENANT_ID', '')
