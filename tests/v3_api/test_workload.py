@@ -12,9 +12,9 @@ if_check_lb = pytest.mark.skipif(
 ENABLE_HOST_NODE_PORT_TESTS = ast.literal_eval(
     os.environ.get('RANCHER_ENABLE_HOST_NODE_PORT_TESTS', "True"))
 
-skip_host_node_port = pytest.mark.skipif(not (ENABLE_HOST_NODE_PORT_TESTS),
-                                   reason='Tests Skipped for AKS,GKE,EKS '
-                                          'Clusters')
+skip_host_node_port = pytest.mark.skipif(
+    not (ENABLE_HOST_NODE_PORT_TESTS),
+    reason='Tests Skipped for AKS,GKE,EKS Clusters')
 
 
 def test_wl_sidekick():
@@ -242,6 +242,7 @@ def test_wl_pause_orchestration():
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload_paused(p_client, workload, False)
     validate_pod_images("nginx", workload, ns.name)
+
 
 @skip_host_node_port
 def test_wl_with_hostPort():
