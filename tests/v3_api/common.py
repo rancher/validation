@@ -510,7 +510,8 @@ def check_for_no_access(url):
 
 def validate_http_response(cmd, target_name_list, client_pod=None):
     target_hit_list = target_name_list[:]
-    for i in range(1, 20):
+    count = 5*len(target_name_list)
+    for i in range(1, count):
         if len(target_hit_list) == 0:
             break
         if client_pod is None:
@@ -738,7 +739,8 @@ def delete_cluster(client, cluster):
         if get_cluster_type(client, cluster) in ["Imported", "Custom"]:
             nodes = client.list_node(clusterId=cluster.id).data
             filters = [
-                {'Name': 'tag:Name', 'Values': ['testcustom*']}]
+                {'Name': 'tag:Name',
+                 'Values': ['testcustom*', 'teststess*']}]
             ip_filter = {}
             ip_list = []
             ip_filter['Name'] = \
