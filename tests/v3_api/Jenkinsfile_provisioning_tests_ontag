@@ -55,9 +55,14 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
 
       try {
         try {
-          stage('Configure and build') {
+          stage('Configure and Build') {
             sh "./tests/v3_api/scripts/configure.sh"
-            sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME} && chmod 400 .ssh/*"
+            if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
+              dir(".ssh") {
+                writeFile(file: "${env.AWS_SSH_KEY_NAME}", text: "${env.AWS_SSH_PEM_KEY}")
+              } 
+              sh "chmod 400 .ssh/*"
+            }
             sh "./tests/v3_api/scripts/build.sh"
           }
 

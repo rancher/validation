@@ -24,7 +24,10 @@ node {
     stage('Configure and Build') {
       sh "./tests/v3_api/scripts/configure.sh"
       if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
-        sh "mkdir -p .ssh && echo \"${AWS_SSH_PEM_KEY}\" > .ssh/${AWS_SSH_KEY_NAME} && chmod 400 .ssh/*"
+        dir(".ssh") {
+          writeFile(file: "${env.AWS_SSH_KEY_NAME}", text: "${env.AWS_SSH_PEM_KEY}")
+        } 
+        sh "chmod 400 .ssh/*"
       }
       sh "./tests/v3_api/scripts/build.sh"
     }
