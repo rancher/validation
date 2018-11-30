@@ -41,8 +41,7 @@ def test_import_rke_cluster():
     cluster = validate_cluster(client, clusters[0],
                                check_intermediate_state=False)
 
-    if RANCHER_CLEANUP_CLUSTER == "True":
-        delete_cluster(client, cluster)
+    cluster_cleanup(client, cluster, aws_nodes)
 
 
 def create_nodes():
