@@ -30,8 +30,8 @@ def test_delete_keypair():
 
 def test_deploy_rancher_server():
     RANCHER_SERVER_CMD = \
-        "docker run -d --restart=unless-stopped -p 80:80 -p 443:443 " + \
-        "rancher/rancher"
+        'docker run -d --name="rancher-server" ' \
+        '--restart=unless-stopped -p 80:80 -p 443:443  rancher/rancher'
     RANCHER_SERVER_CMD += ":" + RANCHER_SERVER_VERSION
     aws_nodes = AmazonWebServices().create_multiple_nodes(
         1, random_test_name("testsa"+HOST_NAME))
@@ -40,6 +40,10 @@ def test_deploy_rancher_server():
     RANCHER_SERVER_URL = "https://" + aws_nodes[0].public_ip_address
     print(RANCHER_SERVER_URL)
     wait_until_active(RANCHER_SERVER_URL)
+
+    RANCHER_SET_DEBUG_CMD = "docker exec rancher-server loglevel --set debug"
+    aws_nodes[0].execute_command(RANCHER_SET_DEBUG_CMD)
+
     token = get_admin_token(RANCHER_SERVER_URL)
     env_details = "env.CATTLE_TEST_URL='" + RANCHER_SERVER_URL + "'\n"
     env_details += "env.ADMIN_TOKEN='" + token + "'\n"
