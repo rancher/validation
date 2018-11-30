@@ -24,7 +24,7 @@ def rancher_version() {
 
 def lastBuildResult() {
  def previous_build = currentBuild.getPreviousBuild()
-  if ( null != previous_build ) { return previous_build.result } else { return 'UKNOWN' }
+  if ( null != previous_build ) { return previous_build.result } else { return 'UNKNOWN' }
 }
 
 def via_webhook() {

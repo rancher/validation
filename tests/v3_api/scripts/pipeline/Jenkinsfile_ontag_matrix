@@ -16,7 +16,7 @@ def rancher_version() {
 
 def lastBuildResult() {
  def previous_build = currentBuild.getPreviousBuild()
-  if ( null != previous_build ) { return previous_build.result } else { return 'UKNOWN' }
+  if ( null != previous_build ) { return previous_build.result } else { return 'UNKNOWN' }
 }
 
 def via_webhook() {
@@ -136,6 +136,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
                 jobs["gke"] = { build job: 'v3_ontag_gke_provision_api', parameters: params2 }
                 jobs["eks"] = { build job: 'v3_ontag_eks_provision_api', parameters: params2 }
                 jobs["aks"] = { build job: 'v3_ontag_aks_provision_api', parameters: params2 }
+                jobs["import"] = { build job: 'v3_ontag_import_provision_api', parameters: params2}
 
                 parallel jobs
               } catch(err) {
