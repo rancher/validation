@@ -264,7 +264,7 @@ def create_and_validate_workload_with_secret_as_volume(p_client, secret, ns,
     volumeMounts = [{"readOnly": False, "type": "volumeMount",
                      "mountPath": mountpath, "name": "vol1"}]
     con = [{"name": "test1",
-            "image": "sangeetha/testclient",
+            "image": TEST_IMAGE,
             "volumeMounts": volumeMounts}]
 
     secretName = secret['name']
@@ -299,7 +299,7 @@ def create_and_validate_workload_with_secret_as_env_variable(p_client, secret,
         "sourceName": secretName
     }]
     con = [{"name": "test",
-            "image": "sangeetha/testclient",
+            "image": TEST_IMAGE,
             "environmentFrom": environmentdata}]
 
     workload = p_client.create_workload(name=name,

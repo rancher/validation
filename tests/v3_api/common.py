@@ -22,8 +22,7 @@ kube_fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "k8s_kube_config")
 MACHINE_TIMEOUT = float(os.environ.get('RANCHER_MACHINE_TIMEOUT', "1200"))
 
-TEST_CLIENT_IMAGE = "sangeetha/testclient"
-TEST_TARGET_IMAGE = "sangeetha/testnewhostrouting"
+TEST_IMAGE = "sangeetha/mytestcontainer"
 CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
 RANCHER_CLEANUP_CLUSTER = \
     ast.literal_eval(os.environ.get('RANCHER_CLEANUP_CLUSTER', "True"))
@@ -546,7 +545,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
     p_client = get_project_client_for_token(project, ADMIN_TOKEN)
     con = [{"name": "test1",
-            "image": "sangeetha/testnewhostrouting"}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -585,14 +584,14 @@ def check_cluster_state(etcd_count):
 
 
 def validate_dns_record(pod, record, expected):
-    # requires pod with `dig` available (sangeetha/testclient)
+    # requires pod with `dig` available - TEST_IMAGE
     host = '{0}.{1}.svc.cluster.local'.format(
         record["name"], record["namespaceId"])
     validate_dns_entry(pod, host, expected)
 
 
 def validate_dns_entry(pod, host, expected):
-    # requires pod with `dig` available (sangeetha/testclient)
+    # requires pod with `dig` available - TEST_IMAGE
     cmd = 'ping -c 1 -W 1 {0}'.format(host)
     ping_output = kubectl_pod_exec(pod, cmd)
 

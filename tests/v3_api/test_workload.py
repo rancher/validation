@@ -21,14 +21,16 @@ def test_wl_sidekick():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("sidekick")
     workload = p_client.create_workload(name=name,
                                         containers=con,
                                         namespaceId=ns.id)
     validate_workload(p_client, workload, "deployment", ns.name)
     side_con = {"name": "test2",
-                "image": TEST_TARGET_IMAGE}
+                "image": "ubuntu",
+                "stdin": True,
+                "tty": True}
     con.append(side_con)
     workload = p_client.update(workload,
                                containers=con)
@@ -41,7 +43,7 @@ def test_wl_deployment():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -53,7 +55,7 @@ def test_wl_statefulset():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -68,7 +70,7 @@ def test_wl_daemonset():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -83,7 +85,7 @@ def test_wl_cronjob():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -100,7 +102,7 @@ def test_wl_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -111,7 +113,7 @@ def test_wl_upgrade():
     revisions = workload.revisions()
     assert len(revisions) == 1
     for revision in revisions:
-        if revision["containers"][0]["image"] == TEST_TARGET_IMAGE:
+        if revision["containers"][0]["image"] == TEST_IMAGE:
             firstrevision = revision.id
 
     con = [{"name": "test1",
@@ -128,23 +130,23 @@ def test_wl_upgrade():
             secondrevision = revision.id
 
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     p_client.update(workload, containers=con)
-    wait_for_pod_images(p_client, workload, ns.name, TEST_CLIENT_IMAGE, 2)
+    wait_for_pod_images(p_client, workload, ns.name, TEST_IMAGE, 2)
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload(p_client, workload, "deployment", ns.name, 2)
-    validate_workload_image(p_client, workload, TEST_CLIENT_IMAGE, ns)
+    validate_workload_image(p_client, workload, TEST_IMAGE, ns)
     revisions = workload.revisions()
     assert len(revisions) == 3
     for revision in revisions:
-        if revision["containers"][0]["image"] == TEST_CLIENT_IMAGE:
+        if revision["containers"][0]["image"] == TEST_IMAGE:
             thirdrevision = revision.id
 
     p_client.action(workload, "rollback", replicaSetId=firstrevision)
-    wait_for_pod_images(p_client, workload, ns.name, TEST_TARGET_IMAGE, 2)
+    wait_for_pod_images(p_client, workload, ns.name, TEST_IMAGE, 2)
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload(p_client, workload, "deployment", ns.name, 2)
-    validate_workload_image(p_client, workload, TEST_TARGET_IMAGE, ns)
+    validate_workload_image(p_client, workload, TEST_IMAGE, ns)
 
     p_client.action(workload, "rollback", replicaSetId=secondrevision)
     wait_for_pod_images(p_client, workload, ns.name, "nginx", 2)
@@ -153,17 +155,17 @@ def test_wl_upgrade():
     validate_workload_image(p_client, workload, "nginx", ns)
 
     p_client.action(workload, "rollback", replicaSetId=thirdrevision)
-    wait_for_pod_images(p_client, workload, ns.name, TEST_CLIENT_IMAGE, 2)
+    wait_for_pod_images(p_client, workload, ns.name, TEST_IMAGE, 2)
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload(p_client, workload, "deployment", ns.name, 2)
-    validate_workload_image(p_client, workload, TEST_CLIENT_IMAGE, ns)
+    validate_workload_image(p_client, workload, TEST_IMAGE, ns)
 
 
 def test_wl_pod_scale_up():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -192,7 +194,7 @@ def test_wl_pod_scale_down():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -223,7 +225,7 @@ def test_wl_pause_orchestration():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("default")
     workload = p_client.create_workload(name=name,
                                         containers=con,
@@ -236,7 +238,7 @@ def test_wl_pause_orchestration():
     con = [{"name": "test1",
             "image": "nginx"}]
     p_client.update(workload, containers=con)
-    validate_pod_images(TEST_CLIENT_IMAGE, workload, ns.name)
+    validate_pod_images(TEST_IMAGE, workload, ns.name)
     p_client.action(workload, "resume")
     workload = wait_for_wl_to_active(p_client, workload)
     wait_for_pods_in_workload(p_client, workload, 2)
@@ -255,7 +257,7 @@ def test_wl_with_hostPort():
             "protocol": "TCP",
             "sourcePort": source_port}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("default")
 
@@ -277,7 +279,7 @@ def test_wl_with_nodePort():
             "protocol": "TCP",
             "sourcePort": 0}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("default")
 
@@ -297,7 +299,7 @@ def test_wl_with_clusterIp():
             "kind": "ClusterIP",
             "protocol": "TCP"}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("default")
 
@@ -315,7 +317,7 @@ def test_wl_with_clusterIp():
     # Deploy test pods used for clusteIp resolution check
     wlname = random_test_name("testclusterip-client")
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
 
     workload_for_test = p_client.create_workload(name=wlname,
                                                  containers=con,
@@ -336,7 +338,7 @@ def test_wl_with_lb():
             "protocol": "TCP",
             "sourcePort": 9001}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("default")
 
@@ -356,7 +358,7 @@ def test_wl_with_clusterIp_scale_and_upgrade():
             "kind": "ClusterIP",
             "protocol": "TCP"}
     con = [{"name": "test-cluster-ip",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("cluster-ip-scale-upgrade")
     workload = p_client.create_workload(name=name,
@@ -370,7 +372,7 @@ def test_wl_with_clusterIp_scale_and_upgrade():
     cluster_ip = sd_records[0].clusterIp
     # get test pods
     wlname = random_test_name("testclusterip-client")
-    wl_con = [{"name": "test1", "image": TEST_CLIENT_IMAGE}]
+    wl_con = [{"name": "test1", "image": TEST_IMAGE}]
     workload_for_test = p_client.create_workload(name=wlname,
                                                  containers=wl_con,
                                                  namespaceId=ns.id,
@@ -392,7 +394,7 @@ def test_wl_with_clusterIp_scale_and_upgrade():
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)
     # upgrade
     con = [{"name": "test-cluster-ip-upgrade-new",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     p_client.update(workload, containers=con)
     workload = wait_for_wl_to_active(p_client, workload)
@@ -410,7 +412,7 @@ def test_wl_with_nodePort_scale_and_upgrade():
             "protocol": "TCP",
             "sourcePort": 0}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("test-node-port-scale-upgrade")
     workload = p_client.create_workload(name=name,
@@ -435,7 +437,7 @@ def test_wl_with_nodePort_scale_and_upgrade():
 
     # upgrade
     con = [{"name": "test-node-port-scale-upgrade-new",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     p_client.update(workload, containers=con)
     workload = wait_for_wl_to_active(p_client, workload)
@@ -454,7 +456,7 @@ def test_wl_with_hostPort_scale_and_upgrade():
             "protocol": "TCP",
             "sourcePort": source_port}
     con = [{"name": "test-host-port-upgrade",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("hostport-scale")
 
@@ -484,7 +486,7 @@ def test_wl_with_hostPort_scale_and_upgrade():
 
     # upgrade
     con = [{"name": "test-host-port-upgrade-new",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     p_client.update(workload, containers=con)
     workload = wait_for_wl_to_active(p_client, workload)
@@ -502,7 +504,7 @@ def test_wl_with_lb_scale_and_upgrade():
             "protocol": "TCP",
             "sourcePort": 9001}
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     name = random_test_name("lb-scale-upgrade")
 
@@ -528,7 +530,7 @@ def test_wl_with_lb_scale_and_upgrade():
 
     # upgrade
     con = [{"name": "test-load-balance-upgrade-new",
-            "image": TEST_TARGET_IMAGE,
+            "image": TEST_IMAGE,
             "ports": [port]}]
     p_client.update(workload, containers=con)
     workload = wait_for_wl_to_active(p_client, workload)
