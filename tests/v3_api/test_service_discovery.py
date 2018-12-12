@@ -77,7 +77,7 @@ def validate_dns_record_for_workload(workload, scale, record,
 
 def test_service_discovery_when_workload_scale_up():
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-sd-up")
     type = "deployment"
 
@@ -97,7 +97,7 @@ def test_service_discovery_when_workload_scale_up():
 
 def test_service_discovery_when_workload_scale_down():
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-sd-dw")
     type = "deployment"
 
@@ -117,7 +117,7 @@ def test_service_discovery_when_workload_scale_down():
 
 def test_service_discovery_when_workload_upgrade():
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-sd-upgrade")
     type = "deployment"
     scale = 2
@@ -137,7 +137,7 @@ def test_service_discovery_when_workload_upgrade():
 
     # upgrade again
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     update_and_validate_workload(workload, con, scale)
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
@@ -148,7 +148,7 @@ def test_dns_record_type_workload_when_workload_scale_up():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-dns-up")
     type = "deployment"
 
@@ -174,7 +174,7 @@ def test_dns_record_type_workload_when_workload_scale_down():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-dns-dw")
     type = "deployment"
 
@@ -202,7 +202,7 @@ def test_dns_record_type_workload_when_workload_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
     name = random_test_name("test-dns-upgrade")
     scale = 2
     type = "deployment"
@@ -225,7 +225,7 @@ def test_dns_record_type_workload_when_workload_upgrade():
 
     # upgrade the workload again
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
     update_and_validate_workload(workload, con, scale)
     # test service discovery
     time.sleep(DNS_RESOLUTION_DEFAULT_SECONDS)
@@ -294,7 +294,7 @@ def test_dns_record_type_multiple_workloads():
     wlname = random_test_name("default")
 
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
 
     additional_workload = p_client.create_workload(name=wlname,
                                                    containers=con,
@@ -383,7 +383,7 @@ def setup(request):
     wlname = random_test_name("default")
 
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
 
     workload = p_client.create_workload(name=wlname,
                                         containers=con,

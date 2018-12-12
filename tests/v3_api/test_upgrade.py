@@ -108,7 +108,7 @@ def create_and_validate_wl():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
     p_client.create_workload(name=wl_name_create, containers=con,
                              namespaceId=ns.id, scale=2)
     validate_wl(wl_name_create)
@@ -131,7 +131,7 @@ def create_and_validate_ingress_xip_io():
     ns = namespace["ns"]
     cluster = namespace["cluster"]
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
 
     # Ingress with daemonSet target
     workload = p_client.create_workload(name=ingress_wlname1_create,
@@ -269,7 +269,7 @@ def create_and_validate_service_discovery():
     cluster = namespace["cluster"]
 
     con = [{"name": "test1",
-            "image": TEST_TARGET_IMAGE}]
+            "image": TEST_IMAGE}]
     workload = p_client.create_workload(name=sd_wlname1_create,
                                         containers=con,
                                         namespaceId=ns.id,
@@ -373,7 +373,7 @@ def create_project_resources():
     wlname = create_prefix + "-testsdclient"
 
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE}]
+            "image": TEST_IMAGE}]
 
     workload = p_client.create_workload(name=wlname,
                                         containers=con,

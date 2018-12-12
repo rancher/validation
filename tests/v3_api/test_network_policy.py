@@ -14,9 +14,7 @@ def test_connectivity_between_pods():
     cluster = namespace["cluster"]
 
     con = [{"name": "test1",
-            "image": TEST_CLIENT_IMAGE+":v2",
-            "ports": [],
-            "environment":{"ROOT_PASSWORD": random_password}
+            "image": TEST_IMAGE,
             }]
     name = random_test_name("default")
     schedulable_node_count = len(get_schedulable_nodes(cluster))
