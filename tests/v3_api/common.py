@@ -973,3 +973,16 @@ def validate_clusterIp(p_client, workload, cluster_ip, test_pods):
     curl_cmd = "http://" + cluster_ip + "/name.html"
     for pod in test_pods:
         validate_http_response(curl_cmd, target_name_list, pod)
+
+def find_condition(obj, condition_type):
+    if not hasattr(obj, 'conditions'):
+        return None
+
+    if obj.conditions is None:
+        return None
+    
+    for condition in obj.conditions: 
+        if condition.type == condition_type:
+            return condition.status
+    
+    return None
