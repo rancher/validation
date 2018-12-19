@@ -4,6 +4,7 @@ import os
 k8s_resurce_dir = os.path.dirname(os.path.realpath(__file__)) + \
                   "/resources/k8s_ymls/"
 
+
 def create_and_validate(
     cloud_provider, rke_client, kubectl, rke_template, nodes,
     base_namespace="ns", network_validation=None, dns_validation=None,
@@ -56,7 +57,7 @@ def validate_rke_cluster(rke_client, kubectl, nodes, base_ns='one',
     If teardown is true, removes any resources created for validation
     """
 
-    validation_node_roles(nodes, kubectl.get_nodes(),etcd_private_ip)
+    validation_node_roles(nodes, kubectl.get_nodes(), etcd_private_ip)
     if network_validation is None:
         network_validation = PodIntercommunicationValidation(kubectl, base_ns)
         network_validation.setup()
@@ -128,13 +129,17 @@ def wait_for_etcd_cluster_health(node, etcd_private_ip=False):
     if etcd_private_ip:
         endpoints = node.private_ip_address
     etcd_tls_cmd = (
-        'ETCDCTL_API=2 etcdctl --endpoints "https://'+endpoints+':2379" --ca-file'
-        ' /etc/kubernetes/ssl/kube-ca.pem --cert-file '
-        '/etc/kubernetes/ssl/kube-node.pem --key-file '
-        '/etc/kubernetes/ssl/kube-node-key.pem cluster-health')
+        'ETCDCTL_API=2 etcdctl --endpoints "https://'+endpoints+':2379" '
+        ' --ca-file /etc/kubernetes/ssl/kube-ca.pem --cert-file '
+        ' $ETCDCTL_CERT --key-file '
+        ' $ETCDCTL_KEY cluster-health')
+
+    print(etcd_tls_cmd)
     start_time = time.time()
     while start_time - time.time() < 120:
-        result = node.docker_exec('etcd', "sh -c '"+ etcd_tls_cmd+"'")
+        result = node.docker_exec('etcd', "sh -c '" + etcd_tls_cmd + "'")
+        print("**RESULT**")
+        print(result)
         if 'cluster is healthy' in result:
             break
         time.sleep(5)
@@ -314,7 +319,6 @@ class DNSServiceDiscoveryValidation(object):
         self.pod_selector = 'k8s-app=pod-test-util'
         self.kubectl = kubectl
 
-
     def setup(self):
 
         for service_name, service_info in self.services.items():
@@ -327,7 +331,6 @@ class DNSServiceDiscoveryValidation(object):
         result = self.kubectl.create_resourse_from_yml(
             k8s_resurce_dir + 'single_pod.yml',
             namespace=self.namespace)
-
 
     def validate(self):
         # wait for exec pod to be ready before validating
@@ -366,7 +369,7 @@ class DNSServiceDiscoveryValidation(object):
             cmd = 'curl "http://{0}/name.html"'.format(dns_record)
             result = self.kubectl.exec_cmd(exec_pod_name, cmd, self.namespace)
             print(result)
-            print (pods_names)
+            print(pods_names)
             assert result.rstrip() in pods_names, (
                 "Service ClusterIP does not reach pods {0}".format(
                     dns_record))
@@ -382,22 +385,47 @@ class DNSServiceDiscoveryValidation(object):
                 'namespace', service_info['namespace'])
 
 
-def validate_k8s_service_images(nodes, expected_images):
+def validate_k8s_service_images(nodes, expectedimagesdict):
     """
-    expected_images should be loaded from the rke cluster YAML
-    verifies that the nodes have the correct image version
+    expected_images should be sent from the tests
+    This verifies that the nodes have the correct image version
     This does not validate containers per role,
     assert_containers_exist_for_roles method does that
     """
+
     for node in nodes:
         containers = node.docker_ps()
-        for service, service_info in expected_images.items():
-            if service in containers:
-                assert service_info['image'] == containers[service], (
-                    "Kubernetes service '{0}' does not match config version "
+        allcontainers = node.docker_ps(includeall=True)
+        print("Container Dictionary ")
+        print(containers)
+        print("All containers dictionary")
+        print(allcontainers)
+        sidekickservice = "service-sidekick"
+        for key in expectedimagesdict.keys():
+            servicename = key
+            if servicename in containers:
+                print("Service name")
+                print(servicename)
+                print(expectedimagesdict[servicename])
+                print(containers[servicename])
+                assert expectedimagesdict[servicename] == \
+                   containers[servicename], (
+                   "K8s service '{0}' does not match config version "
+                   "{1}, found {2} on node {3}".format(
+                   servicename, expectedimagesdict[servicename],
+                   containers[servicename], node.node_name))
+        if sidekickservice in expectedimagesdict.keys():
+            if sidekickservice in allcontainers:
+                print("sidekick-service in allcontainers")
+                print(sidekickservice)
+                print(expectedimagesdict[sidekickservice])
+                print(allcontainers[sidekickservice])
+                assert expectedimagesdict[sidekickservice] == \
+                    allcontainers[sidekickservice], (
+                    "K8s service '{0}' does not match config version "
                     "{1}, found {2} on node {3}".format(
-                        service, service_info['image'], containers[service],
-                        node.node_name))
+                    sidekickservice, expectedimagesdict[sidekickservice],
+                    allcontainers[sidekickservice], node.node_name))
 
 
 def validate_remove_cluster(nodes):

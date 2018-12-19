@@ -27,7 +27,8 @@ class RKEClient(object):
     def _run(self, command):
         print('Running command: {}'.format(command))
         start_time = time.time()
-        result = self.run_command('cd {0} && {1}'.format(self._working_dir, command))
+        result = self.run_command('cd {0} && {1}'.format(self._working_dir,
+                                                         command))
         end_time = time.time()
         print('Run time for command {0}: {1} seconds'.format(
             command, end_time - start_time))

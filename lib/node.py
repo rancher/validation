@@ -73,8 +73,8 @@ class Node(object):
                 key_filename=self.ssh_key_path, port=self.ssh_port)
             result = self._ssh_client.exec_command(command)
             if result and len(result) == 3 and result[1].readable():
-                result = [str(result[1].read(),'utf-8'),
-                          str(result[2].read(),'utf-8')]
+                result = [str(result[1].read(), 'utf-8'),
+                          str(result[2].read(), 'utf-8')]
         finally:
             self._ssh_client.close()
         return result
@@ -93,9 +93,13 @@ class Node(object):
         if DOCKER_INSTALLED.lower() == 'false':
             self.install_docker()
 
-    def docker_ps(self, all=False):
+    def docker_ps(self, all=False, includeall=False):
         result = self.execute_command(
             'docker ps --format "{{.Names}}\t{{.Image}}"')
+        if includeall:
+            print("Docker ps including all containers")
+            result = self.execute_command(
+                'docker ps -a --format "{{.Names}}\t{{.Image}}"')
         if result[1] != '':
             raise Exception(
                 "Error:'docker ps' command received this stderr output: "
@@ -126,6 +130,7 @@ class Node(object):
     def docker_exec(self, container_name, cmd):
         command = 'docker exec {0} {1}'.format(container_name, cmd)
         result = self.execute_command(command)
+        print(result)
         if result[1] != '':
             raise Exception(
                 "Error:'docker exec' command received this stderr output: "
