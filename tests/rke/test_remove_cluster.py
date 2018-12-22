@@ -12,8 +12,7 @@ def test_remove_1(test_name, cloud_provider, rke_client, kubectl):
     nodes = cloud_provider.create_multiple_nodes(3, test_name)
     create_and_validate(
         cloud_provider, rke_client, kubectl, rke_template, nodes)
-    result = rke_client.remove()
-    assert result.ok, result.std + result.stderr
+    rke_client.remove()
 
     validate_remove_cluster(nodes)
 
