@@ -44,7 +44,7 @@ def random_int(start, end):
 
 
 def random_test_name(name="test"):
-    return name+"-"+str(random_int(10000, 99999))
+    return name + "-" + str(random_int(10000, 99999))
 
 
 def get_admin_client():
@@ -231,7 +231,7 @@ def validate_workload(p_client, workload, type, ns_name, pod_count=1,
         assert len(wl_result["status"]["active"]) >= pod_count
         return
     for key, value in workload.workloadLabels.items():
-        label = key+"="+value
+        label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods_result = execute_kubectl_cmd(get_pods)
     assert len(pods_result["items"]) == pod_count
@@ -252,7 +252,7 @@ def validate_workload_with_sidekicks(p_client, workload, type, ns_name,
         "get " + type + " " + workload.name + " -n " + ns_name)
     assert wl_result["status"]["readyReplicas"] == pod_count
     for key, value in workload.workloadLabels.items():
-        label = key+"="+value
+        label = key + "=" + value
     get_pods = "get pods -l" + label + " -n " + ns_name
     execute_kubectl_cmd(get_pods)
     pods_result = execute_kubectl_cmd(get_pods)
@@ -419,7 +419,7 @@ def validate_ingress(p_client, cluster, workloads, host, path,
     if (insecure_redirect):
         curl_args = " -L --insecure "
     if len(host) > 0:
-        curl_args += " --header 'Host: "+host+"'"
+        curl_args += " --header 'Host: " + host + "'"
     nodes = get_schedulable_nodes(cluster)
     target_name_list = get_target_names(p_client, workloads)
     for node in nodes:
@@ -509,7 +509,7 @@ def check_for_no_access(url):
 
 def validate_http_response(cmd, target_name_list, client_pod=None):
     target_hit_list = target_name_list[:]
-    count = 5*len(target_name_list)
+    count = 5 * len(target_name_list)
     for i in range(1, count):
         if len(target_hit_list) == 0:
             break
@@ -521,11 +521,12 @@ def validate_http_response(cmd, target_name_list, client_pod=None):
             result = kubectl_pod_exec(client_pod, wget_cmd)
             result = result.decode()
         result = result.rstrip()
-        print(cmd)
-        print(result)
+        print("cmd: \t" + cmd)
+        print("result: \t" + result)
         assert result in target_name_list
         if result in target_hit_list:
             target_hit_list.remove(result)
+    print("After removing all, the rest is: ", target_hit_list)
     assert len(target_hit_list) == 0
 
 
@@ -554,7 +555,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     validate_workload(p_client, workload, "daemonSet", ns.name,
                       len(get_schedulable_nodes(cluster)))
     if not skipIngresscheck:
-        host = "test"+str(random_int(10000, 99999))+".com"
+        host = "test" + str(random_int(10000, 99999)) + ".com"
         path = "/name.html"
         rule = {"host": host,
                 "paths":
@@ -694,7 +695,7 @@ def get_custom_host_registration_cmd(client, cluster, roles, node):
     cmd = cluster_token.nodeCommand
     for role in roles:
         assert role in allowed_roles
-        cmd += " --"+role
+        cmd += " --" + role
     additional_options = " --address " + node.public_ip_address + \
                          " --internal-address " + node.private_ip_address
     cmd += additional_options
@@ -723,7 +724,7 @@ def get_cluster_type(client, cluster):
                 return "Custom"
     for cluster_config in cluster_configs:
         if cluster_config in cluster:
-                return cluster_config
+            return cluster_config
     return "Imported"
 
 
@@ -824,7 +825,7 @@ def wait_for_pod_images(p_client, workload, ns_name, expectedimage, numofpods,
     get_pods = "get pods -l" + label + " -n " + ns_name
     pods = execute_kubectl_cmd(get_pods)
 
-    for x in range(0, numofpods-1):
+    for x in range(0, numofpods - 1):
         pod = pods["items"][x]
         podimage = pod["spec"]["containers"][0]["image"]
         while podimage != expectedimage:
@@ -922,9 +923,9 @@ def cluster_cleanup(client, cluster, aws_nodes=None):
 
 
 def create_config_file(env_details):
-        file = open(env_file, "w")
-        file.write(env_details)
-        file.close()
+    file = open(env_file, "w")
+    file.write(env_details)
+    file.close()
 
 
 def validate_hostPort(p_client, workload, source_port, cluster):
@@ -973,3 +974,82 @@ def validate_clusterIp(p_client, workload, cluster_ip, test_pods):
     curl_cmd = "http://" + cluster_ip + "/name.html"
     for pod in test_pods:
         validate_http_response(curl_cmd, target_name_list, pod)
+
+
+def wait_for_pv_to_be_available(c_client, pv_object, timeout=DEFAULT_TIMEOUT):
+    start = time.time()
+    time.sleep(2)
+    list = c_client.list_persistent_volume(uuid=pv_object.uuid).data
+    assert len(list) == 1
+    pv = list[0]
+    while pv.state != "available":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to available")
+        time.sleep(.5)
+        list = c_client.list_persistent_volume(uuid=pv_object.uuid).data
+        assert len(list) == 1
+        pv = list[0]
+    return pv
+
+
+def wait_for_pvc_to_be_bound(p_client, pvc_object, timeout=DEFAULT_TIMEOUT):
+    start = time.time()
+    time.sleep(2)
+    list = p_client.list_persistent_volume_claim(uuid=pvc_object.uuid).data
+    assert len(list) == 1
+    pvc = list[0]
+    while pvc.state != "bound":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to bound")
+        time.sleep(.5)
+        list = p_client.list_persistent_volume_claim(uuid=pvc_object.uuid).data
+        assert len(list) == 1
+        pvc = list[0]
+    return pvc
+
+
+def create_wl_with_nfs(p_client, ns_id, pvc_name, wl_name,
+                       mount_path, sub_path, is_daemonSet=False):
+    volumes = [{"type": "volume",
+                "name": "vol1",
+                "persistentVolumeClaim": {
+                    "readOnly": "false",
+                    "type": "persistentVolumeClaimVolumeSource",
+                    "persistentVolumeClaimId": pvc_name
+                }}]
+    volumeMounts = [{"readOnly": "False",
+                     "type": "volumeMount",
+                     "mountPath": mount_path,
+                     "subPath": sub_path,
+                     "name": "vol1"
+                     }]
+    con = [{"name": "test1",
+            "image": TEST_IMAGE,
+            "volumeMounts": volumeMounts
+            }]
+    if is_daemonSet:
+        workload = p_client.create_workload(name=wl_name,
+                                            containers=con,
+                                            namespaceId=ns_id,
+                                            volumes=volumes,
+                                            daemonSetConfig={})
+    else:
+        workload = p_client.create_workload(name=wl_name,
+                                            containers=con,
+                                            namespaceId=ns_id,
+                                            volumes=volumes)
+    return workload
+
+
+def write_content_to_file(pod, content, filename):
+    cmd_write = "/bin/bash -c 'echo {1} > {0}'".format(filename, content)
+    output = kubectl_pod_exec(pod, cmd_write)
+    assert output.strip().decode('utf-8') == ""
+
+
+def validate_file_content(pod, content, filename):
+    cmd_get_content = "/bin/bash -c 'cat {0}' ".format(filename)
+    output = kubectl_pod_exec(pod, cmd_get_content)
+    assert output.strip().decode('utf-8') == content
