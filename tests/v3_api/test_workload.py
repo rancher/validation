@@ -130,16 +130,18 @@ def test_wl_upgrade():
             secondrevision = revision.id
 
     con = [{"name": "test1",
-            "image": TEST_IMAGE}]
+            "image": "ubuntu",
+            "tty": True,
+            "stdin": True}]
     p_client.update(workload, containers=con)
-    wait_for_pod_images(p_client, workload, ns.name, TEST_IMAGE, 2)
+    wait_for_pod_images(p_client, workload, ns.name, "ubuntu", 2)
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload(p_client, workload, "deployment", ns.name, 2)
-    validate_workload_image(p_client, workload, TEST_IMAGE, ns)
+    validate_workload_image(p_client, workload, "ubuntu", ns)
     revisions = workload.revisions()
     assert len(revisions) == 3
     for revision in revisions:
-        if revision["containers"][0]["image"] == TEST_IMAGE:
+        if revision["containers"][0]["image"] == "ubuntu":
             thirdrevision = revision.id
 
     p_client.action(workload, "rollback", replicaSetId=firstrevision)
@@ -155,10 +157,10 @@ def test_wl_upgrade():
     validate_workload_image(p_client, workload, "nginx", ns)
 
     p_client.action(workload, "rollback", replicaSetId=thirdrevision)
-    wait_for_pod_images(p_client, workload, ns.name, TEST_IMAGE, 2)
+    wait_for_pod_images(p_client, workload, ns.name, "ubuntu", 2)
     wait_for_pods_in_workload(p_client, workload, 2)
     validate_workload(p_client, workload, "deployment", ns.name, 2)
-    validate_workload_image(p_client, workload, TEST_IMAGE, ns)
+    validate_workload_image(p_client, workload, "ubuntu", ns)
 
 
 def test_wl_pod_scale_up():

@@ -489,7 +489,7 @@ def validate_rke_dm_host_1(node_template,
                            rancherKubernetesEngineConfig=rke_config):
     client = get_admin_client()
     nodes = []
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
@@ -508,21 +508,21 @@ def validate_rke_dm_host_2(node_template,
                            rancherKubernetesEngineConfig=rke_config):
     client = get_admin_client()
     nodes = []
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
             "controlPlane": True,
             "quantity": 1}
     nodes.append(node)
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
             "etcd": True,
             "quantity": 1}
     nodes.append(node)
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
@@ -538,21 +538,21 @@ def validate_rke_dm_host_3(node_template,
                            rancherKubernetesEngineConfig=rke_config):
     client = get_admin_client()
     nodes = []
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
             "controlPlane": True,
             "quantity": 2}
     nodes.append(node)
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
             "etcd": True,
             "quantity": 3}
     nodes.append(node)
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
@@ -570,7 +570,7 @@ def validate_rke_dm_host_4(node_template,
 
     # Create cluster and add a node pool to this cluster
     nodes = []
-    node_name = random_name()
+    node_name = random_node_name()
     node = {"hostnamePrefix": node_name,
             "nodeTemplateId": node_template.id,
             "requestedHostname": node_name,
@@ -631,8 +631,8 @@ def create_and_vaildate_cluster(client, nodes,
     return cluster, node_pools
 
 
-def random_name():
-    return "test" + "-" + str(random_int(10000, 99999))
+def random_node_name():
+    return "testauto" + "-" + str(random_int(10000, 99999))
 
 
 @pytest.fixture(scope='session')
