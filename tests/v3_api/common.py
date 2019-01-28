@@ -559,8 +559,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         path = "/name.html"
         rule = {"host": host,
                 "paths":
-                    {path: {
-                        "workloadIds": [workload.id], "targetPort": "80"}}}
+                    [{"workloadIds": [workload.id], "targetPort": "80"}]}
         p_client.create_ingress(name=name,
                                 namespaceId=ns.id,
                                 rules=[rule])
