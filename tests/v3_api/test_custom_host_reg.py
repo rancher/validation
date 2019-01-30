@@ -21,7 +21,11 @@ def test_add_custom_host():
         HOST_COUNT, random_test_name("testsa"+HOST_NAME))
     if AGENT_REG_CMD != "":
         for aws_node in aws_nodes:
-            aws_node.execute_command(AGENT_REG_CMD)
+            additional_options = " --address " + aws_node.public_ip_address + \
+                                 " --internal-address " + \
+                                 aws_node.private_ip_address
+            agent_cmd = AGENT_REG_CMD + additional_options
+            aws_node.execute_command(agent_cmd)
 
 
 def test_delete_keypair():

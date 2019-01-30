@@ -21,8 +21,7 @@ def test_ingress():
     host = "test1.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule])
@@ -53,12 +52,9 @@ def test_ingress_with_same_rules_having_multiple_targets():
     host = "testm1.com"
     path = "/name.html"
     rule1 = {"host": host,
-             "paths": {
-                 path: {"workloadIds": [workload1.id], "targetPort": "80"}}}
+             "paths": [{"workloadIds": [workload1.id], "targetPort": "80"}]}
     rule2 = {"host": host,
-             "paths": {
-                 path:
-                      {"workloadIds": [workload2.id], "targetPort": "80"}}}
+             "paths": [{"workloadIds": [workload2.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule1, rule2])
@@ -87,8 +83,7 @@ def test_ingress_edit_target():
     host = "test2.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload1.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload1.id], "targetPort": "80"}]}
     ingress = p_client.create_ingress(name=name,
                                       namespaceId=ns.id,
                                       rules=[rule])
@@ -96,8 +91,7 @@ def test_ingress_edit_target():
                      [workload1], host, path)
 
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload2.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload2.id], "targetPort": "80"}]}
     ingress = p_client.update(ingress, rules=[rule])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload2], host, path)
@@ -119,8 +113,7 @@ def test_ingress_edit_host():
     host = "test3.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     ingress = p_client.create_ingress(name=name,
                                       namespaceId=ns.id,
                                       rules=[rule])
@@ -128,8 +121,7 @@ def test_ingress_edit_host():
                      [workload], host, path)
     host = "test4.com"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     ingress = p_client.update(ingress, rules=[rule])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], host, path)
@@ -151,8 +143,7 @@ def test_ingress_edit_path():
     host = "test5.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     ingress = p_client.create_ingress(name=name,
                                       namespaceId=ns.id,
                                       rules=[rule])
@@ -160,8 +151,7 @@ def test_ingress_edit_path():
                      [workload], host, path)
     path = "/service1.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     ingress = p_client.update(ingress, rules=[rule])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload], host, path)
@@ -188,8 +178,7 @@ def test_ingress_edit_add_more_rules():
     host1 = "test6.com"
     path = "/name.html"
     rule1 = {"host": host1,
-             "paths":
-                 {path: {"workloadIds": [workload1.id], "targetPort": "80"}}}
+             "paths": [{"workloadIds": [workload1.id], "targetPort": "80"}]}
     ingress = p_client.create_ingress(name=name,
                                       namespaceId=ns.id,
                                       rules=[rule1])
@@ -198,8 +187,7 @@ def test_ingress_edit_add_more_rules():
 
     host2 = "test7.com"
     rule2 = {"host": host2,
-             "paths":
-                 {path: {"workloadIds": [workload2.id], "targetPort": "80"}}}
+             "paths": [{"workloadIds": [workload2.id], "targetPort": "80"}]}
     ingress = p_client.update(ingress, rules=[rule1, rule2])
     validate_ingress(namespace["p_client"], namespace["cluster"],
                      [workload2], host2, path)
@@ -222,8 +210,7 @@ def test_ingress_scale_up_target():
     host = "test8.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule])
@@ -250,8 +237,7 @@ def test_ingress_upgrade_target():
     host = "test9.com"
     path = "/name.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule])
@@ -280,8 +266,7 @@ def test_ingress_rule_with_only_path():
     host = ""
     path = "/service2.html"
     rule = {"host": host,
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule])
@@ -302,11 +287,8 @@ def test_ingress_rule_with_only_host():
     validate_workload(p_client, workload, "deployment", ns.name, pod_count=2)
 
     host = "test10.com"
-    path = ""
     rule = {"host": host,
-            "paths":
-                {path:
-                    {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"workloadIds": [workload.id], "targetPort": "80"}]}
     p_client.create_ingress(name=name,
                             namespaceId=ns.id,
                             rules=[rule])
@@ -331,8 +313,8 @@ def test_ingress_xip_io():
                       len(get_schedulable_nodes(cluster)))
     path = "/name.html"
     rule = {"host": "xip.io",
-            "paths":
-                {path: {"workloadIds": [workload.id], "targetPort": "80"}}}
+            "paths": [{"path": path,
+                       "workloadIds": [workload.id], "targetPort": "80"}]}
     ingress = p_client.create_ingress(name=name,
                                       namespaceId=ns.id,
                                       rules=[rule])
