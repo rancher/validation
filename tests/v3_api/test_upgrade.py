@@ -198,7 +198,8 @@ def modify_workload_validate_ingress():
         name=ingress_wlname2_validate, namespace=ns.id).data[0]
     print(ing_workload)
     # Increment workload
-    ing_workload = p_client.update(ing_workload, scale=4, containers=ing_workload.containers)
+    ing_workload = p_client.update(ing_workload, scale=4,
+                                   containers=ing_workload.containers)
     wait_for_pods_in_workload(p_client, ing_workload, 4)
     validate_wl(ing_workload.name, 4)
 
@@ -232,7 +233,8 @@ def modify_workload_validate_secret():
     secret_workload1 = p_client.list_workload(
         name=secret_wl_name1_validate, namespace=ns.id).data[0]
 
-    secret_workload1 = p_client.update(secret_workload1, scale=3, containers=secret_workload1.containers)
+    secret_workload1 = p_client.update(secret_workload1, scale=3,
+                                       containers=secret_workload1.containers)
     wait_for_pods_in_workload(p_client, secret_workload1, 3)
     validate_workload_with_secret(
         p_client, secret_workload1, "deployment", ns.name,
@@ -241,7 +243,8 @@ def modify_workload_validate_secret():
     secret_workload2 = p_client.list_workload(name=secret_wl_name2_validate,
                                               namespace=ns.id).data[0]
 
-    secret_workload2 = p_client.update(secret_workload2, scale=3, containers=secret_workload2.containers)
+    secret_workload2 = p_client.update(secret_workload2, scale=3,
+                                       containers=secret_workload2.containers)
     wait_for_pods_in_workload(p_client, secret_workload2, 3)
     validate_workload_with_secret(
         p_client, secret_workload2, "deployment", ns.name,
