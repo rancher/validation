@@ -97,7 +97,7 @@ def get_aks_config():
             "enableNetworkPolicy": False,
         },
 
-        "name": random_test_name("testaks"),
+        "name": random_test_name("test-auto-aks"),
         "type": "cluster"
     }
 

@@ -102,7 +102,7 @@ def get_gke_config():
             "projectId": "rancher-qa",
 
         },
-        "name": "qagkeclustertest",
+        "name": "test-auto-gke",
         "type": "cluster"
     }
 
