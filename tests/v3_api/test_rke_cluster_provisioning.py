@@ -18,7 +18,7 @@ AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
 
-engine_install_url = "https://releases.rancher.com/install-docker/17.03.sh"
+engine_install_url = "https://releases.rancher.com/install-docker/18.09.sh"
 rke_config = {
     "addonJobTimeout": 30,
     "authentication":
@@ -32,15 +32,22 @@ rke_config = {
         {"provider": "metrics-server",
          "type": "monitoringConfig"},
     "network":
-        {"plugin": "canal"},
+        {"plugin": "canal",
+         "type": "networkConfig",
+         "options": {"flannelBackendType": "vxlan"}},
     "services": {
         "etcd": {
             "extraArgs":
                 {"heartbeat-interval": 500,
                  "election-timeout": 5000},
-            "snapshot": True,
+            "snapshot": False,
+            "backupConfig":
+                {"intervalHours": 12, "retention": 6, "type": "backupConfig"},
+            "creation": "12h",
+            "retention": "72h",
             "type": "etcdService"},
         "kubeApi": {
+            "alwaysPullImages": False,
             "podSecurityPolicy": False,
             "serviceNodePortRange": "30000-32767",
             "type": "kubeAPIService"}},
@@ -142,7 +149,7 @@ def test_rke_custom_host_1():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     for aws_node in aws_nodes:
         docker_run_cmd = \
             get_custom_host_registration_cmd(client, cluster, node_roles,
@@ -163,7 +170,7 @@ def test_rke_custom_host_2():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
@@ -188,7 +195,7 @@ def test_rke_custom_host_3():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
@@ -216,7 +223,7 @@ def test_rke_custom_host_4():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     delay = 120
     host_threads = []
     for node_role in node_roles:
@@ -245,7 +252,7 @@ def test_rke_custom_host_stress():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for aws_node in aws_nodes:
         docker_run_cmd = \
@@ -269,7 +276,7 @@ def test_rke_custom_host_etcd_plane_changes():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for i in range(0, 5):
         aws_node = aws_nodes[i]
@@ -315,7 +322,7 @@ def test_rke_custom_host_etcd_plane_changes_1():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for i in range(0, 5):
         aws_node = aws_nodes[i]
@@ -356,7 +363,7 @@ def test_rke_custom_host_control_plane_changes():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for i in range(0, 5):
         aws_node = aws_nodes[i]
@@ -395,7 +402,7 @@ def test_rke_custom_host_worker_plane_changes():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for i in range(0, 3):
         aws_node = aws_nodes[i]
@@ -422,7 +429,7 @@ def test_rke_custom_host_worker_plane_changes():
     cluster_cleanup(client, cluster, aws_nodes)
 
 
-def test_rke_custom_control_node_power_down():
+def test_rke_custom_host_control_node_power_down():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
             5, random_test_name("testcustom"))
@@ -433,7 +440,7 @@ def test_rke_custom_control_node_power_down():
     cluster = client.create_cluster(name=random_name(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
-    assert cluster.state == "active"
+    assert cluster.state == "provisioning"
     i = 0
     for i in range(0, 3):
         aws_node = aws_nodes[i]
@@ -638,10 +645,16 @@ def random_node_name():
 @pytest.fixture(scope='session')
 def node_template_az():
     client = get_admin_client()
-    azConfig = {
-        "availabilitySet": "docker-machine",
+    ec2_cloud_credential_config = {
         "clientId": AZURE_CLIENT_ID,
         "clientSecret": AZURE_CLIENT_SECRET,
+        "subscriptionId": AZURE_SUBSCRIPTION_ID
+    }
+    azure_cloud_credential = client.create_cloud_credential(
+        azurecredentialConfig=ec2_cloud_credential_config
+    )
+    azConfig = {
+        "availabilitySet": "docker-machine",
         "customData": "",
         "dns": "",
         "dockerPort": "2376",
@@ -670,7 +683,6 @@ def node_template_az():
         "storageType": "Standard_LRS",
         "subnet": "docker-machine",
         "subnetPrefix": "192.168.0.0/16",
-        "subscriptionId": AZURE_SUBSCRIPTION_ID,
         "usePrivateIp": False,
         "vnet": "docker-machine-vnet"
     }
@@ -679,6 +691,7 @@ def node_template_az():
         name=random_name(),
         driver="azure",
         namespaceId="fixme",
+        cloudCredentialId=azure_cloud_credential.id,
         useInternalIpAddress=True)
     node_template = client.wait_success(node_template)
     return node_template
@@ -687,14 +700,18 @@ def node_template_az():
 @pytest.fixture(scope='session')
 def node_template_do():
     client = get_admin_client()
+    do_cloud_credential_config = {"accessToken": DO_ACCESSKEY}
+    do_cloud_credential = client.create_cloud_credential(
+        digitaloceancredentialConfig=do_cloud_credential_config
+    )
     node_template = client.create_node_template(
-        digitaloceanConfig={"accessToken": DO_ACCESSKEY,
-                            "region": "nyc3",
+        digitaloceanConfig={"region": "nyc3",
                             "size": "2gb",
                             "image": "ubuntu-16-04-x64"},
         name=random_name(),
         driver="digitalocean",
         namespaceId="fixme",
+        cloudCredentialId=do_cloud_credential.id,
         useInternalIpAddress=True)
     node_template = client.wait_success(node_template)
     return node_template
@@ -703,12 +720,15 @@ def node_template_do():
 @pytest.fixture(scope='session')
 def node_template_ec2():
     client = get_admin_client()
+    ec2_cloud_credential_config = {"accessKey": AWS_ACCESS_KEY_ID,
+                                   "secretKey": AWS_SECRET_ACCESS_KEY}
+    ec2_cloud_credential = client.create_cloud_credential(
+        amazonec2credentialConfig=ec2_cloud_credential_config
+    )
     amazonec2Config = {
-        "accessKey": AWS_ACCESS_KEY_ID,
         "instanceType": "t2.medium",
         "region": AWS_REGION,
         "rootSize": "16",
-        "secretKey": AWS_SECRET_ACCESS_KEY,
         "securityGroup": [AWS_SG],
         "sshUser": "ubuntu",
         "subnetId": AWS_SUBNET,
@@ -724,7 +744,9 @@ def node_template_ec2():
         namespaceId="fixme",
         useInternalIpAddress=True,
         driver="amazonec2",
-        engineInstallURL=engine_install_url
+        engineInstallURL=engine_install_url,
+        cloudCredentialId=ec2_cloud_credential.id
+
     )
     node_template = client.wait_success(node_template)
     return node_template
@@ -733,12 +755,15 @@ def node_template_ec2():
 @pytest.fixture(scope='session')
 def node_template_ec2_with_provider():
     client = get_admin_client()
+    ec2_cloud_credential_config = {"accessKey": AWS_ACCESS_KEY_ID,
+                                   "secretKey": AWS_SECRET_ACCESS_KEY}
+    ec2_cloud_credential = client.create_cloud_credential(
+        amazonec2credentialConfig=ec2_cloud_credential_config
+    )
     amazonec2Config = {
-        "accessKey": AWS_ACCESS_KEY_ID,
         "instanceType": "t2.medium",
         "region": AWS_REGION,
         "rootSize": "16",
-        "secretKey": AWS_SECRET_ACCESS_KEY,
         "securityGroup": [AWS_SG],
         "sshUser": "ubuntu",
         "subnetId": AWS_SUBNET,
@@ -755,7 +780,8 @@ def node_template_ec2_with_provider():
         namespaceId="fixme",
         useInternalIpAddress=True,
         driver="amazonec2",
-        engineInstallURL=engine_install_url
+        engineInstallURL=engine_install_url,
+        cloudCredentialId=ec2_cloud_credential.id
     )
     node_template = client.wait_success(node_template)
     return node_template
