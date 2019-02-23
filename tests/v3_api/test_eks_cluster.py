@@ -49,7 +49,7 @@ def get_eks_config():
     eksConfig = {
 
         "amazonElasticContainerServiceConfig": amazonConfig,
-        "name": random_test_name("testeks"),
+        "name": random_test_name("test-auto-eks"),
         "type": "cluster"
     }
     print("\nEKS Configuration")
