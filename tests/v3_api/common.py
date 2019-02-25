@@ -346,6 +346,22 @@ def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
     return wl
 
 
+def wait_for_ingress_to_active(client, ingress, timeout=DEFAULT_TIMEOUT):
+    start = time.time()
+    ingresses = client.list_ingress(uuid=ingress.uuid).data
+    assert len(ingresses) == 1
+    wl = ingresses[0]
+    while wl.state != "active":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(.5)
+        ingresses = client.list_ingress(uuid=ingress.uuid).data
+        assert len(ingresses) == 1
+        wl = ingresses[0]
+    return wl
+
+
 def wait_for_wl_transitioning(client, workload, timeout=DEFAULT_TIMEOUT,
                               state="error"):
     start = time.time()
@@ -531,7 +547,7 @@ def validate_http_response(cmd, target_name_list, client_pod=None):
 
 
 def validate_cluster(client, cluster, intermediate_state="provisioning",
-                     check_intermediate_state=True, skipIngresscheck=False,
+                     check_intermediate_state=True, skipIngresscheck=True,
                      nodes_not_in_active_state=[]):
     validate_cluster_state(
         client, cluster,
@@ -560,9 +576,10 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         rule = {"host": host,
                 "paths":
                     [{"workloadIds": [workload.id], "targetPort": "80"}]}
-        p_client.create_ingress(name=name,
-                                namespaceId=ns.id,
-                                rules=[rule])
+        ingress = p_client.create_ingress(name=name,
+                                          namespaceId=ns.id,
+                                          rules=[rule])
+        wait_for_ingress_to_active(p_client, ingress)
         validate_ingress(p_client, cluster, [workload], host, path)
     return cluster
 
