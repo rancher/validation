@@ -38,6 +38,10 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
   println("** This will **not** result in a pipeline run.")
   currentBuild.result = lastBuildResult()
 } else {
+  def branch = "v2.1"
+  if (rancher_version.startsWith("v2.2")) {
+    branch = "master"
+  }
   try {
     node {
       def rootPath = "/src/rancher-validation/"
@@ -67,7 +71,12 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
       wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
         stage('Checkout') {
             deleteDir()
-            checkout scm
+            checkout([
+                      $class: 'GitSCM',
+                      branches: [[name: "*/${branch}"]],
+                      extensions: scm.extensions + [[$class: 'CleanCheckout']],
+                      userRemoteConfigs: scm.userRemoteConfigs
+                    ])
         }
 
         stage('Configure and Build') {
@@ -123,11 +132,13 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
 
                 params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"),
                            string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}"),
-                           string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}") ]
+                           string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}"), 
+                           string(name: 'branch', value: "${branch}") ]
 
                 params2 = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL_2}"),
-                           string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN_2}"),
-                           string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}") ]
+                            string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN_2}"),
+                            string(name: 'RANCHER_SERVER_VERSION', value: "${rancher_version}"),
+                            string(name: 'branch', value: "${branch}") ]
 
                 jobs["do"] = { build job: 'v3_ontag_do_provision_api', parameters: params }
                 jobs["ec2"] = { build job: 'v3_ontag_ec2_provision_api', parameters: params }

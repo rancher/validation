@@ -7,11 +7,21 @@ def imageName = "rancher-validation-tests"
 def envFile = ".env"
 def RANCHER_DEPLOYED = false
 
+def branch = "master"
+if ("${env.branch}" != "null" && "${env.branch}" != "") {
+  branch = "${env.branch}"
+}
+
 node {
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
     stage('Checkout') {
       deleteDir()
-      checkout scm
+      checkout([
+                $class: 'GitSCM',
+                branches: [[name: "*/${branch}"]],
+                extensions: scm.extensions + [[$class: 'CleanCheckout']],
+                userRemoteConfigs: scm.userRemoteConfigs
+              ])
     }
 
     try {
@@ -42,7 +52,7 @@ node {
       }
 
       stage('Run provisioning tests') {
-        params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}") ]
+        params = [ string(name: 'CATTLE_TEST_URL', value: "${CATTLE_TEST_URL}"), string(name: 'ADMIN_TOKEN', value: "${ADMIN_TOKEN}"), string(name: 'branch', value: "${branch}") ]
 
         jobs["custom"] = { build job: 'v3_test_custom_cluster', parameters: params}
         jobs["do"] = { build job: 'v3_test_do_cluster', parameters: params }

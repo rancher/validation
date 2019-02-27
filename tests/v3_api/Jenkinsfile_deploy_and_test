@@ -15,10 +15,20 @@ node {
   def envFile = ".env"
   def rancherConfig = "rancher_env.config"
 
+  def branch = "master"
+  if ("${env.branch}" != "null" && "${env.branch}" != "") {
+    branch = "${env.branch}"
+  }
+
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
     stage('Checkout') {
       deleteDir()
-      checkout scm
+      checkout([
+                $class: 'GitSCM',
+                branches: [[name: "*/${branch}"]],
+                extensions: scm.extensions + [[$class: 'CleanCheckout']],
+                userRemoteConfigs: scm.userRemoteConfigs
+              ])
     }
 
     stage('Configure and Build') {
