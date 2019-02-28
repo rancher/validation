@@ -18,7 +18,7 @@ AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
 
-engine_install_url = "https://releases.rancher.com/install-docker/17.03.sh"
+engine_install_url = "https://releases.rancher.com/install-docker/18.09.sh"
 rke_config = {
     "addonJobTimeout": 30,
     "authentication":
