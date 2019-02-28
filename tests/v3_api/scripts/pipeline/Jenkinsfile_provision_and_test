@@ -27,6 +27,9 @@ node {
     branch = "${env.branch}"
   }
 
+  println "Branch env: ${env.branch}"
+  println "Branch: ${branch}"
+
   wrap([$class: 'AnsiColorBuildWrapper', 'colorMapName': 'XTerm', 'defaultFg': 2, 'defaultBg':1]) {
     stage('Checkout') {
       deleteDir()
