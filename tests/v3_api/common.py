@@ -553,7 +553,7 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         client, cluster,
         check_intermediate_state=check_intermediate_state,
         intermediate_state=intermediate_state,
-        nodes_not_in_active_state=[nodes_not_in_active_state])
+        nodes_not_in_active_state=nodes_not_in_active_state)
     # Create Daemon set workload and have an Ingress with Workload
     # rule pointing to this daemonset
     create_kubeconfig(cluster)
