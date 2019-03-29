@@ -548,8 +548,8 @@ def validate_http_response(cmd, target_name_list, client_pod=None):
 
 def validate_cluster(client, cluster, intermediate_state="provisioning",
                      check_intermediate_state=True, skipIngresscheck=True,
-                     nodes_not_in_active_state=[]):
-    validate_cluster_state(
+                     nodes_not_in_active_state=[], k8s_version=""):
+    cluster = validate_cluster_state(
         client, cluster,
         check_intermediate_state=check_intermediate_state,
         intermediate_state=intermediate_state,
@@ -557,6 +557,8 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
     # Create Daemon set workload and have an Ingress with Workload
     # rule pointing to this daemonset
     create_kubeconfig(cluster)
+    if k8s_version != "":
+        check_cluster_version(cluster, k8s_version)
     if hasattr(cluster, 'rancherKubernetesEngineConfig'):
         check_cluster_state(len(get_role_nodes(cluster, "etcd")))
     project, ns = create_project_and_ns(ADMIN_TOKEN, cluster)
@@ -582,6 +584,21 @@ def validate_cluster(client, cluster, intermediate_state="provisioning",
         wait_for_ingress_to_active(p_client, ingress)
         validate_ingress(p_client, cluster, [workload], host, path)
     return cluster
+
+
+def check_cluster_version(cluster, version):
+    cluster_k8s_version = \
+        cluster.appliedSpec["rancherKubernetesEngineConfig"][
+            "kubernetesVersion"]
+    assert cluster_k8s_version == version, \
+        "cluster_k8s_version: " + cluster_k8s_version + \
+        " Expected: " + version
+    expected_k8s_version = version[:version.find("-")]
+    k8s_version = execute_kubectl_cmd("version")
+    kubectl_k8s_version = k8s_version["serverVersion"]["gitVersion"]
+    assert kubectl_k8s_version == expected_k8s_version, \
+        "kubectl version: " + kubectl_k8s_version + \
+        " Expected: " + expected_k8s_version
 
 
 def check_cluster_state(etcd_count):
@@ -897,6 +914,7 @@ def validate_cluster_state(client, cluster,
     assert cluster.state == "active"
     wait_for_nodes_to_become_active(client, cluster,
                                     exception_list=nodes_not_in_active_state)
+    return cluster
 
 
 def wait_until_available(client, obj, timeout=DEFAULT_TIMEOUT):

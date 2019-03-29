@@ -3,6 +3,7 @@ from threading import Thread
 import pytest
 from .common import *  # NOQA
 
+K8S_VERSION = os.environ.get('RANCHER_K8S_VERSION', "")
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
@@ -53,6 +54,9 @@ rke_config = {
             "type": "kubeAPIService"}},
     "sshAgentAuth": False}
 
+if K8S_VERSION != "":
+    rke_config["kubernetesVersion"] = K8S_VERSION
+
 rke_config_aws_provider = rke_config.copy()
 rke_config_aws_provider["cloudProvider"] = {"name": "aws",
                                             "type": "cloudProvider",
@@ -71,6 +75,10 @@ rke_config_azure_provider["cloudProvider"] = {
 if_stress_enabled = pytest.mark.skipif(
     not os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT'),
     reason='Stress test not enabled')
+
+if_test_edit_cluster = pytest.mark.skipif(
+    CLUSTER_NAME == "",
+    reason='Edit cluster tests not enabled')
 
 
 def test_rke_az_host_1(node_template_az):
@@ -155,7 +163,7 @@ def test_rke_custom_host_1():
             get_custom_host_registration_cmd(client, cluster, node_roles,
                                              aws_node)
         aws_node.execute_command(docker_run_cmd)
-    cluster = validate_cluster(client, cluster)
+    cluster = validate_cluster(client, cluster, k8s_version=K8S_VERSION)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
@@ -178,7 +186,7 @@ def test_rke_custom_host_2():
                                              aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
-    cluster = validate_cluster(client, cluster)
+    cluster = validate_cluster(client, cluster, k8s_version=K8S_VERSION)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
@@ -203,7 +211,7 @@ def test_rke_custom_host_3():
                                              aws_node)
         aws_node.execute_command(docker_run_cmd)
         i += 1
-    cluster = validate_cluster(client, cluster)
+    cluster = validate_cluster(client, cluster, k8s_version=K8S_VERSION)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
@@ -235,7 +243,8 @@ def test_rke_custom_host_4():
     for host_thread in host_threads:
         host_thread.join()
     cluster = validate_cluster(client, cluster,
-                               check_intermediate_state=False)
+                               check_intermediate_state=False,
+                               k8s_version=K8S_VERSION)
     cluster_cleanup(client, cluster, aws_nodes)
 
 
@@ -480,6 +489,22 @@ def test_rke_custom_host_control_node_power_down():
     validate_cluster(client, cluster, check_intermediate_state=False)
 
     cluster_cleanup(client, cluster, aws_nodes)
+
+
+@if_test_edit_cluster
+def test_edit_cluster_k8s_version():
+    client = get_admin_client()
+    clusters = client.list_cluster(name=CLUSTER_NAME).data
+    assert len(clusters) == 1
+    cluster = clusters[0]
+    rke_config = cluster.rancherKubernetesEngineConfig
+    rke_updated_config = rke_config.copy()
+    rke_updated_config["kubernetesVersion"] = K8S_VERSION
+    cluster = client.update(cluster,
+                            name=cluster.name,
+                            rancherKubernetesEngineConfig=rke_updated_config)
+    cluster = validate_cluster(client, cluster, intermediate_state="updating",
+                               k8s_version=K8S_VERSION)
 
 
 def test_delete_cluster():
