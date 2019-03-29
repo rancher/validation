@@ -140,8 +140,8 @@ def validate_resoucequota_thru_kubectl(namespace):
     assert "spec" in response[0]
     quotadict = (response[0]["spec"])
     assert quotadict['hard']['pods'] == testdict['limit']['pods']
-    assert quotadict['hard']['requests.cpu'] == \
-           testdict['limit']['requestsCpu']
+    assert \
+        quotadict['hard']['requests.cpu'] == testdict['limit']['requestsCpu']
 
 
 @pytest.fixture(scope='module', autouse="True")
