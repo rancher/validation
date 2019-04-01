@@ -11,6 +11,7 @@ PyJWT==1.6.4
 pytest-repeat==0.7.0
 pytest-xdist==1.23.0
 pytest==3.8.1
+pytest-ordering==0.6
 python-digitalocean==1.13.2
 PyYAML==3.13
 requests==2.19.1
