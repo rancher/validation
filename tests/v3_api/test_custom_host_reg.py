@@ -35,7 +35,8 @@ def test_delete_keypair():
 def test_deploy_rancher_server():
     RANCHER_SERVER_CMD = \
         'docker run -d --name="rancher-server" ' \
-        '--restart=unless-stopped -p 80:80 -p 443:443  rancher/rancher'
+        '--restart=unless-stopped -p 80:80 -p 443:443  ' \
+        'rancher/rancher'
     RANCHER_SERVER_CMD += ":" + RANCHER_SERVER_VERSION
     aws_nodes = AmazonWebServices().create_multiple_nodes(
         1, random_test_name("testsa"+HOST_NAME))
@@ -122,22 +123,3 @@ def get_admin_token(RANCHER_SERVER_URL):
     serverurl = client.list_setting(name="server-url").data
     client.update(serverurl[0], value=RANCHER_SERVER_URL)
     return token
-
-
-def wait_until_active(rancher_url, timeout=120):
-    start = time.time()
-    while check_for_no_access(rancher_url):
-        time.sleep(.5)
-        print("No access yet")
-        if time.time() - start > timeout:
-            raise Exception('Timed out waiting for Rancher server '
-                            'to become active')
-    return
-
-
-def check_for_no_access(rancher_url):
-    try:
-        requests.get(rancher_url, verify=False)
-        return False
-    except requests.ConnectionError:
-        return True
