@@ -24,8 +24,7 @@ def test_import_rke_cluster():
     rkecommand = 'rke ' + "up" \
                  + ' --config ' + clusterfilepath
     print(rkecommand)
-    (result, returncode) = run_command_with_stderr(rkecommand)
-    assert (returncode == 0)
+    result = run_command_with_stderr(rkecommand)
 
     cluster = client.create_cluster(name=clustername)
     print(cluster)
