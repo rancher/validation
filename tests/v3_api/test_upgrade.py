@@ -13,7 +13,6 @@ from .test_service_discovery import create_dns_record
 cluster_name = os.environ.get('RANCHER_CLUSTER_NAME', "")
 validate_prefix = os.environ.get('RANCHER_VALIDATE_RESOURCES_PREFIX', "step0")
 create_prefix = os.environ.get('RANCHER_CREATE_RESOURCES_PREFIX', "step1")
-cluster_details = {}
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None,
              "testclient_pods": []}
 upgrade_check_stage = os.environ.get('RANCHER_UPGRADE_CHECK', "preupgrade")
@@ -68,40 +67,108 @@ if_post_upgrade = pytest.mark.skipif(
 if_pre_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "preupgrade",
     reason='This test is not executed for PreUpgrade checks')
-
-
-@if_pre_upgrade
-def test_upgrade_create_and_validate_resources():
-    create_and_validate_wl()
-    create_and_validate_service_discovery()
-    create_validate_wokloads_with_secret()
-    if validate_ingress:
-        create_and_validate_ingress_xip_io()
+if_validate_ingress = pytest.mark.skipif(
+    validate_ingress is False,
+    reason='This test is not executed')
 
 
 @if_post_upgrade
-def test_upgrade_validate_resources():
+@pytest.mark.run(order=1)
+def test_validate_existing_project_resources():
+    validate_existing_project_resources()
 
-    # Validate existing resources
+
+@if_post_upgrade
+@pytest.mark.run(order=2)
+def test_validate_existing_wl():
     validate_wl(wl_name_validate)
+
+
+@if_post_upgrade
+@pytest.mark.run(order=2)
+def test_validate_existing_service_discovery():
     validate_service_discovery(sd_name_validate,
                                [sd_wlname1_validate, sd_wlname2_validate])
-    if validate_ingress:
-        validate_ingress_xip_io(ingress_name1_validate,
-                                ingress_wlname1_validate)
-        validate_ingress_xip_io(ingress_name2_validate,
-                                ingress_wlname2_validate)
 
+
+@if_post_upgrade
+@pytest.mark.run(order=2)
+def test_validate_existing_wl_with_secret():
     validate_worklaods_with_secret(
         secret_wl_name1_validate, secret_wl_name2_validate)
-    modify_resources_validate()
-    # Create and validate new resources
+
+
+@if_post_upgrade
+@if_validate_ingress
+@pytest.mark.run(order=2)
+def test_validate_existing_ingress_daemon():
+    validate_ingress_xip_io(ingress_name1_validate,
+                            ingress_wlname1_validate)
+
+
+@if_post_upgrade
+@if_validate_ingress
+@pytest.mark.run(order=2)
+def test_validate_existing_ingress_wl():
+    validate_ingress_xip_io(ingress_name2_validate,
+                            ingress_wlname2_validate)
+
+
+@if_post_upgrade
+@pytest.mark.run(order=3)
+def test_modify_workload_validate_deployment():
+    modify_workload_validate_deployment()
+
+
+@if_post_upgrade
+@pytest.mark.run(order=3)
+def test_modify_workload_validate_sd():
+    modify_workload_validate_sd()
+
+
+@if_post_upgrade
+@pytest.mark.run(order=3)
+def test_modify_workload_validate_secret():
+    modify_workload_validate_secret()
+
+
+@if_post_upgrade
+@if_validate_ingress
+@pytest.mark.run(order=3)
+def test_modify_workload_validate_ingress():
+    modify_workload_validate_ingress()
+
+
+@pytest.mark.run(order=4)
+def test_create_project_resources():
     create_project_resources()
+
+
+@pytest.mark.run(order=5)
+def test_create_and_validate_wl():
     create_and_validate_wl()
+
+
+@pytest.mark.run(order=5)
+def test_create_and_validate_service_discovery():
     create_and_validate_service_discovery()
+
+
+@pytest.mark.run(order=5)
+def test_create_validate_wokloads_with_secret():
     create_validate_wokloads_with_secret()
-    if validate_ingress:
-        create_and_validate_ingress_xip_io()
+
+
+@if_validate_ingress
+@pytest.mark.run(order=5)
+def test_create_and_validate_ingress_xip_io_daemon():
+    create_and_validate_ingress_xip_io_daemon()
+
+
+@if_validate_ingress
+@pytest.mark.run(order=5)
+def test_create_and_validate_ingress_xip_io_wl():
+    create_and_validate_ingress_xip_io_wl()
 
 
 def create_and_validate_wl():
@@ -126,7 +193,7 @@ def validate_wl(workload_name, pod_count=2):
     validate_service_discovery(workload_name, [workload_name])
 
 
-def create_and_validate_ingress_xip_io():
+def create_and_validate_ingress_xip_io_daemon():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
     cluster = namespace["cluster"]
@@ -150,6 +217,13 @@ def create_and_validate_ingress_xip_io():
                             rules=[rule])
     validate_ingress_xip_io(ingress_name1_create, ingress_wlname1_create)
 
+
+def create_and_validate_ingress_xip_io_wl():
+    p_client = namespace["p_client"]
+    ns = namespace["ns"]
+    con = [{"name": "test1",
+            "image": TEST_IMAGE}]
+
     # Ingress with Deployment target
     workload = p_client.create_workload(name=ingress_wlname2_create,
                                         containers=con,
@@ -164,16 +238,6 @@ def create_and_validate_ingress_xip_io():
                             namespaceId=ns.id,
                             rules=[rule])
     validate_ingress_xip_io(ingress_name2_create, ingress_wlname2_create)
-
-
-def modify_resources_validate():
-
-    # Modify various resources and validate
-    modify_workload_validate_deployment()
-    modify_workload_validate_sd()
-    if validate_ingress:
-        modify_workload_validate_ingress()
-    modify_workload_validate_secret()
 
 
 def modify_workload_validate_deployment():
@@ -353,11 +417,6 @@ def create_project_client(request):
     cluster = clusters[0]
     create_kubeconfig(cluster)
     namespace["cluster"] = cluster
-
-    if upgrade_check_stage == "preupgrade":
-        create_project_resources()
-    else:
-        validate_existing_project_resources()
 
 
 def create_project_resources():
