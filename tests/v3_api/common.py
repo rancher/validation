@@ -327,7 +327,7 @@ def run_command_with_stderr(command):
         output = e.output
         returncode = e.returncode
     print(returncode)
-    return output
+    return (output, returncode)
 
 
 def wait_for_wl_to_active(client, workload, timeout=DEFAULT_TIMEOUT):
