@@ -75,6 +75,9 @@ if_pre_upgrade = pytest.mark.skipif(
 if_validate_ingress = pytest.mark.skipif(
     validate_ingress is False,
     reason='This test is not executed')
+if_upgrade_rancher = pytest.mark.skipif(
+    upgrade_check_stage != "upgrade_rancher",
+    reason='This test is only for testing upgrading Rancher')
 
 
 @if_post_upgrade
@@ -176,6 +179,10 @@ def test_create_and_validate_ingress_xip_io_wl():
     create_and_validate_ingress_xip_io_wl()
 
 
+# the flag if_upgarde_rancher is false all the time
+# because we do not have this option for the variable RANCHER_UPGRADE_CHECK
+# instead, we will have a new pipeline that calls this function directly
+@if_upgrade_rancher
 def test_rancher_upgrade():
     upgrade_rancher_server(CATTLE_TEST_URL)
     client = get_admin_client()
@@ -430,13 +437,6 @@ def create_project_client(request):
     create_kubeconfig(cluster)
     namespace["cluster"] = cluster
 
-    if upgrade_check_stage == "preupgrade":
-        create_project_resources()
-    elif upgrade_check_stage == "postupgrade":
-        validate_existing_project_resources()
-    else:
-        print("Upgrade only, no resources created.")
-
 
 def create_project_resources():
     cluster = namespace["cluster"]
@@ -554,7 +554,7 @@ def upgrade_rancher_server(serverIp,
     stopCommand = "docker stop " + containerName
     print(exec_shell_command(serverIp, 22, stopCommand, "",
           sshUser, sshKeyPath))
-    
+
     createVolumeCommand = "docker create --volumes-from " + containerName + \
                           " --name rancher-data rancher/rancher:" + rancherVersion
 
