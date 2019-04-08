@@ -30,7 +30,12 @@ PRIVATE_IMAGES = {
     "rhel-7.6-docker-native-113": {
         'image': 'ami-04b9aacf7e1512c0b', 'ssh_user': 'ec2-user'},
     "suse-sles12-sp2-docker-18061ce": {
-        'image': 'ami-0cc154aeb82bd8fa0', 'ssh_user': 'ec2-user'}}
+        'image': 'ami-0cc154aeb82bd8fa0', 'ssh_user': 'ec2-user'},
+    "ubuntu-16.04-docker-18.09": {
+        'image': 'ami-07e968eb9151b2599', 'ssh_user': 'ubuntu'},
+    "ubuntu-18.04-docker-18.09": {
+        'image': 'ami-02dcbc347c866fb5d', 'ssh_user': 'ubuntu'}
+}
 
 PUBLIC_AMI = {
     'us-east-2': {
