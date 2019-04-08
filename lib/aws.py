@@ -34,8 +34,9 @@ PRIVATE_IMAGES = {
     "ubuntu-16.04-docker-18.09": {
         'image': 'ami-07e968eb9151b2599', 'ssh_user': 'ubuntu'},
     "ubuntu-18.04-docker-18.09": {
-        'image': 'ami-02dcbc347c866fb5d', 'ssh_user': 'ubuntu'}
-}
+        'image': 'ami-02dcbc347c866fb5d', 'ssh_user': 'ubuntu'},
+    "rhel-7.6-docker-18.09": {
+        'image': 'ami-094574ffb6efb3a9b', 'ssh_user': 'ec2-user'}}
 
 PUBLIC_AMI = {
     'us-east-2': {
