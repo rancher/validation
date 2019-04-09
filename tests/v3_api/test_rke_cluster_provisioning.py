@@ -18,6 +18,7 @@ AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
 AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
+HOST_NAME = os.environ.get('RANCHER_HOST_NAME', "testcustom")
 
 engine_install_url = "https://releases.rancher.com/install-docker/18.09.sh"
 rke_config = {
@@ -150,7 +151,7 @@ def test_rke_ec2_host_4(node_template_ec2):
 def test_rke_custom_host_1():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            1, random_test_name("testcustom"))
+            1, random_test_name(HOST_NAME))
     node_roles = ["worker", "controlplane", "etcd"]
 
     client = get_admin_client()
@@ -170,7 +171,7 @@ def test_rke_custom_host_1():
 def test_rke_custom_host_2():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            5, random_test_name("testcustom"))
+            5, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -193,7 +194,7 @@ def test_rke_custom_host_2():
 def test_rke_custom_host_3():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            8, random_test_name("testcustom"))
+            8, random_test_name(HOST_NAME))
     node_roles = [
         ["controlplane"], ["controlplane"],
         ["etcd"], ["etcd"], ["etcd"],
@@ -218,7 +219,7 @@ def test_rke_custom_host_3():
 def test_rke_custom_host_4():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            8, random_test_name("testcustom"))
+            8, random_test_name(HOST_NAME))
     node_roles = [
         {"roles": ["controlplane"],
          "nodes":[aws_nodes[0], aws_nodes[1]]},
@@ -277,7 +278,7 @@ def test_rke_custom_host_stress():
 def test_rke_custom_host_etcd_plane_changes():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            7, random_test_name("testcustom"))
+            7, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -323,7 +324,7 @@ def test_rke_custom_host_etcd_plane_changes():
 def test_rke_custom_host_etcd_plane_changes_1():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            7, random_test_name("testcustom"))
+            7, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
@@ -363,7 +364,7 @@ def test_rke_custom_host_control_plane_changes():
     aws_nodes = \
         aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            6, random_test_name("testcustom"))
+            6, random_test_name(HOST_NAME))
 
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
@@ -403,7 +404,7 @@ def test_rke_custom_host_control_plane_changes():
 def test_rke_custom_host_worker_plane_changes():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            4, random_test_name("testcustom"))
+            4, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"]]
 
@@ -441,7 +442,7 @@ def test_rke_custom_host_worker_plane_changes():
 def test_rke_custom_host_control_node_power_down():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            5, random_test_name("testcustom"))
+            5, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"]]
 

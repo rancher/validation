@@ -556,7 +556,8 @@ def upgrade_rancher_server(serverIp,
           sshUser, sshKeyPath))
 
     createVolumeCommand = "docker create --volumes-from " + containerName + \
-                          " --name rancher-data rancher/rancher:" + rancherVersion
+                          " --name rancher-data rancher/rancher:" + \
+                          rancherVersion
 
     print(exec_shell_command(serverIp, 22, createVolumeCommand, "",
           sshUser, sshKeyPath))
@@ -565,7 +566,8 @@ def upgrade_rancher_server(serverIp,
     print(exec_shell_command(serverIp, 22, removeCommand, "",
           sshUser, sshKeyPath))
 
-    runCommand = "docker run -d --volumes-from rancher-data --restart=unless-stopped " \
+    runCommand = "docker run -d --volumes-from rancher-data " \
+                 "--restart=unless-stopped " \
                  "-p 80:80 -p 443:443 " + upgradeImage + ":" + upgradeVersion
     print(exec_shell_command(serverIp, 22, runCommand, "",
           sshUser, sshKeyPath))
