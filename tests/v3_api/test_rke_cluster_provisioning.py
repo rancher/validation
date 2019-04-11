@@ -335,7 +335,7 @@ def test_rke_custom_host_etcd_plane_changes_1():
                   ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(RANCHER_CREATE_CLUSTER_NAME,
+    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "provisioning"
@@ -501,7 +501,7 @@ def test_rke_custom_host_control_node_power_down():
 @if_test_edit_cluster
 def test_edit_cluster_k8s_version():
     client = get_admin_client()
-    clusters = client.list_cluster(name=CLUSTER_NAME).data
+    clusters = client.list_cluster(name=RANCHER_CLUSTER_NAME_CREATE).data
     assert len(clusters) == 1
     cluster = clusters[0]
     rke_config = cluster.rancherKubernetesEngineConfig
@@ -516,8 +516,8 @@ def test_edit_cluster_k8s_version():
 
 def test_delete_cluster():
     client = get_admin_client()
-    if len(CLUSTER_NAME) > 0:
-        clusters = client.list_cluster(name=CLUSTER_NAME).data
+    if len(RANCHER_CLUSTER_NAME_CREATE) > 0:
+        clusters = client.list_cluster(name=RANCHER_CLUSTER_NAME_CREATE).data
     else:
         clusters = client.list_cluster().data
     for cluster in clusters:
