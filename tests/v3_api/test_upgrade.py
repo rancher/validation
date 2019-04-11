@@ -10,7 +10,7 @@ from .test_secrets import (
     create_secret)
 from .test_service_discovery import create_dns_record
 
-cluster_name = os.environ.get('RANCHER_CLUSTER_NAME', "")
+cluster_name = CLUSTER_NAME
 validate_prefix = os.environ.get('RANCHER_VALIDATE_RESOURCES_PREFIX', "step0")
 create_prefix = os.environ.get('RANCHER_CREATE_RESOURCES_PREFIX', "step1")
 namespace = {"p_client": None, "ns": None, "cluster": None, "project": None,

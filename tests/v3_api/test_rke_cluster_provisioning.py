@@ -4,6 +4,7 @@ import pytest
 from .common import *  # NOQA
 
 K8S_VERSION = os.environ.get('RANCHER_K8S_VERSION', "")
+K8S_VERSION_UPGRADE = os.environ.get('RANCHER_K8S_VERSION_UPGRADE', "")
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
@@ -505,12 +506,12 @@ def test_edit_cluster_k8s_version():
     cluster = clusters[0]
     rke_config = cluster.rancherKubernetesEngineConfig
     rke_updated_config = rke_config.copy()
-    rke_updated_config["kubernetesVersion"] = K8S_VERSION
+    rke_updated_config["kubernetesVersion"] = K8S_VERSION_UPGRADE
     cluster = client.update(cluster,
                             name=cluster.name,
                             rancherKubernetesEngineConfig=rke_updated_config)
     cluster = validate_cluster(client, cluster, intermediate_state="updating",
-                               k8s_version=K8S_VERSION)
+                               k8s_version=K8S_VERSION_UPGRADE)
 
 
 def test_delete_cluster():
