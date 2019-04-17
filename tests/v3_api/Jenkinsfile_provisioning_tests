@@ -27,13 +27,13 @@ node {
     try {
       try {
         stage('Configure and Build') {
-          sh "./tests/v3_api/scripts/configure.sh"
-          if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
+          if (AWS_SSH_PEM_KEY != '' && AWS_SSH_KEY_NAME != '') {
             dir(".ssh") {
-              writeFile(file: "${env.AWS_SSH_KEY_NAME}", text: "${env.AWS_SSH_PEM_KEY}")
-            } 
-            sh "chmod 400 .ssh/*"
+              def decoded = new String(AWS_SSH_PEM_KEY.decodeBase64())
+              writeFile file: AWS_SSH_KEY_NAME, text: decoded
+            }
           }
+          sh "./tests/v3_api/scripts/configure.sh"
           sh "./tests/v3_api/scripts/build.sh"
         }
 
