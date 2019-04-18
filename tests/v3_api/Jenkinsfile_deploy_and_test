@@ -32,7 +32,7 @@ node {
     }
 
     stage('Configure and Build') {
-      if (AWS_SSH_PEM_KEY != '' && AWS_SSH_KEY_NAME != '') {
+      if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
         dir(".ssh") {
           def decoded = new String(AWS_SSH_PEM_KEY.decodeBase64())
           writeFile file: AWS_SSH_KEY_NAME, text: decoded
