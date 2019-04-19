@@ -81,12 +81,6 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
         }
 
         stage('Configure and Build') {
-          if (env.AWS_SSH_PEM_KEY && env.AWS_SSH_KEY_NAME) {
-            dir(".ssh") {
-              def decoded = new String(AWS_SSH_PEM_KEY.decodeBase64())
-              writeFile file: AWS_SSH_KEY_NAME, text: decoded
-            }
-          }
           sh "./tests/v3_api/scripts/configure.sh"
           sh "./tests/v3_api/scripts/build.sh"
         }
