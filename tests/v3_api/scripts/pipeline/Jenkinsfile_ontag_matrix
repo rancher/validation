@@ -42,6 +42,9 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
   if (rancher_version.startsWith("v2.2") || rancher_version == "master") {
     branch = "master"
   }
+  if (env.BRANCH) {
+    branch = "${BRANCH}"
+  }
   try {
     node {
       def rootPath = "/src/rancher-validation/"
