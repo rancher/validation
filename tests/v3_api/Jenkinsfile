@@ -8,7 +8,7 @@ node {
 
   def setupResultsOut = "setup-results.xml"
   def testResultsOut = "results.xml"
-  def imageName = "rancher-validation-tests"
+  def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
   def testsDir = "tests/v3_api/"
 
   def branch = "master"
@@ -51,10 +51,12 @@ node {
         sh "docker cp ${testContainer}:${rootPath}${testResultsOut} ."
         step([$class: 'JUnitResultArchiver', testResults: "**/${testResultsOut}"])
         sh "docker rm -v ${testContainer}"
+        sh "docker rmi ${imageName}"
       }
     } catch(err){
       sh "docker stop ${testContainer}"
       sh "docker rm -v ${testContainer}"
+      sh "docker rmi ${imageName}"
     }
   }
 }

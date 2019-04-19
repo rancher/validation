@@ -42,6 +42,9 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
   if (rancher_version.startsWith("v2.2") || rancher_version == "master") {
     branch = "master"
   }
+  if (env.BRANCH) {
+    branch = "${BRANCH}"
+  }
   try {
     node {
       def rootPath = "/src/rancher-validation/"
@@ -59,7 +62,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
       def deleteResultsOut = "delete-results.xml"
       def deleteResultsOut2 = "delete-results-2.xml"
 
-      def imageName = "rancher-validation-tests"
+      def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
       def testsDir = "tests/v3_api/"
 
       def envFile = ".env"
@@ -200,6 +203,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
             sh "docker rm -v ${deleteContainer}"
             sh "docker stop ${deleteContainer2}"
             sh "docker rm -v ${deleteContainer2}"
+            sh "docker rmi ${imageName}"
           }
         } catch(err){
           sh "docker stop ${setupContainer}"
@@ -210,6 +214,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
           sh "docker rm -v ${deleteContainer}"
           sh "docker stop ${deleteContainer2}"
           sh "docker rm -v ${deleteContainer2}"
+          sh "docker rmi ${imageName}"
         }
       }
     }

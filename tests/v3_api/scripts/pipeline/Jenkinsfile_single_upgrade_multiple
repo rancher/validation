@@ -3,7 +3,7 @@
 rootPath = "/src/rancher-validation/"
 containerPrefix = "${JOB_NAME}${BUILD_NUMBER}"
 rancherConfig = "rancher_env.config"
-imageName = "rancher-validation-tests"
+imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
 testsDir = "tests/v3_api/"
 paramsConfigFile = "params_env.config"
 
@@ -169,6 +169,7 @@ node {
     }
 
     containerCleanup()
+    sh "docker rmi ${imageName}"
   }
 }
 

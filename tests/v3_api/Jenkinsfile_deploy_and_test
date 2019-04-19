@@ -9,7 +9,7 @@ node {
 
   def setupResultsOut = "setup-results.xml"
   def testResultsOut = "results.xml"
-  def imageName = "rancher-validation-tests"
+  def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
   def testsDir = "tests/v3_api/"
 
   def envFile = ".env"
@@ -74,6 +74,7 @@ node {
 
         sh "docker rm -v ${setupContainer}"
         sh "docker rm -v ${testContainer}"
+        sh "docker rmi ${imageName}"
       }
     } catch(err){
       sh "docker stop ${setupContainer}"
@@ -81,6 +82,8 @@ node {
 
       sh "docker rm -v ${setupContainer}"
       sh "docker rm -v ${testContainer}"
+      
+      sh "docker rmi ${imageName}"
     }
   }
 }

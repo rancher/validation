@@ -51,7 +51,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
 
       def setupResultsOut = "setup-results.xml"
       def testResultsOut = "results.xml"
-      def imageName = "rancher-validation-tests"
+      def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
       def testsDir = "tests/v3_api/"
 
       def envFile = ".env"
@@ -112,6 +112,7 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
 
             sh "docker rm -v ${setupContainer}"
             sh "docker rm -v ${testContainer}"
+            sh "docker rmi ${imageName}"
           }
         } catch(err){
           sh "docker stop ${setupContainer}"
@@ -119,6 +120,8 @@ if ( true == via_webhook() && (!(rancher_version ==~ rancher_version_regex)) ) {
 
           sh "docker rm -v ${setupContainer}"
           sh "docker rm -v ${testContainer}"
+
+          sh "docker rmi ${imageName}"
         }
       }
     }

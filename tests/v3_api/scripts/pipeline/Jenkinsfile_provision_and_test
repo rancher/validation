@@ -9,7 +9,7 @@ node {
 
   def provisionResultsOut = "provision-results.xml"
   def testResultsOut = "api-results.xml"
-  def imageName = "rancher-validation-tests"
+  def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
   def testsDir = "tests/v3_api/"
   def rancherConfig = "rancher_env.config"
 
@@ -79,6 +79,7 @@ node {
         
         sh "docker rm -v ${provisionContainer}"
         sh "docker rm -v ${testContainer}"
+        sh "docker rmi ${imageName}"
       }
     } catch(err){
       sh "docker stop ${provisionContainer}"
@@ -86,6 +87,8 @@ node {
 
       sh "docker stop ${testContainer}"
       sh "docker rm -v ${testContainer}"
+
+      sh "docker rmi ${imageName}"
 
       echo "Error: " + err
     }
