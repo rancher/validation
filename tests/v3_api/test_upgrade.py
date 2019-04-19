@@ -65,6 +65,13 @@ secret_wl_name2_create = create_prefix + "-testwl2withsec"
 secret_wl_name1_validate = validate_prefix + "-testwl1withsec"
 secret_wl_name2_validate = validate_prefix + "-testwl2withsec"
 
+app_ns = create_prefix + "-app-ns"
+app_create_name = create_prefix + "-app"
+app_validate_name = validate_prefix + "-app"
+# the pre_upgrade_externalId is for launching an app
+pre_upgrade_externalId = "catalog://?catalog=library&template=mysql&version=0.3.7"
+# the post_upgrade_externalId is for upgrading the existing app
+post_upgrade_externalId = "catalog://?catalog=library&template=mysql&version=0.3.8"
 
 if_post_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "postupgrade",
@@ -107,6 +114,12 @@ def test_validate_existing_wl_with_secret():
 
 
 @if_post_upgrade
+@pytest.mark.run(order=2)
+def test_validate_existing_catalog_app():
+    validate_catalog_app(app_validate_name, pre_upgrade_externalId)
+
+
+@if_post_upgrade
 @if_validate_ingress
 @pytest.mark.run(order=2)
 def test_validate_existing_ingress_daemon():
@@ -138,6 +151,12 @@ def test_modify_workload_validate_sd():
 @pytest.mark.run(order=3)
 def test_modify_workload_validate_secret():
     modify_workload_validate_secret()
+
+
+@if_post_upgrade
+@pytest.mark.run(order=3)
+def test_modify_catalog_app():
+    modify_catalog_app()
 
 
 @if_post_upgrade
@@ -177,6 +196,11 @@ def test_create_and_validate_ingress_xip_io_daemon():
 @pytest.mark.run(order=5)
 def test_create_and_validate_ingress_xip_io_wl():
     create_and_validate_ingress_xip_io_wl()
+
+
+@pytest.mark.run(order=5)
+def test_create_and_validate_catalog_app():
+    create_and_validate_catalog_app()
 
 
 # the flag if_upgarde_rancher is false all the time
@@ -573,3 +597,58 @@ def upgrade_rancher_server(serverIp,
           sshUser, sshKeyPath))
 
     wait_until_active(CATTLE_TEST_URL)
+
+
+def create_and_validate_catalog_app():
+    cluster = namespace["cluster"]
+    p_client = namespace['p_client']
+    ns = create_ns(get_cluster_client_for_token(cluster, ADMIN_TOKEN),
+                   cluster, namespace["project"], ns_name=app_ns)
+    app = p_client.create_app(
+        answers={
+            "defaultImage": "true",
+            "image": "mysql",
+            "imageTag": "5.7.14",
+            "mysqlDatabase": "admin",
+            "mysqlPassword": "",
+            "mysqlUser": "admin",
+            "persistence.enabled": "false",
+            "persistence.size": "8Gi",
+            "persistence.storageClass": "",
+            "service.nodePort": "",
+            "service.port": "3306",
+            "service.type": "ClusterIP"
+        },
+        externalId=pre_upgrade_externalId,
+        name=app_create_name,
+        projectId=namespace["project"].id,
+        prune=False,
+        targetNamespace=ns.id
+    )
+    validate_catalog_app(app.name, pre_upgrade_externalId)
+
+
+def modify_catalog_app():
+    p_client = namespace["p_client"]
+    app = wait_for_app_to_active(p_client, app_validate_name)
+    # upgrade the catalog app to a newer version
+    p_client.action(obj=app, action_name="upgrade",
+                    externalId=post_upgrade_externalId)
+    validate_catalog_app(app.name, post_upgrade_externalId)
+
+
+def validate_catalog_app(app_name, external_id):
+    p_client = namespace["p_client"]
+    app = wait_for_app_to_active(p_client, app_name)
+    assert app.externalId == external_id, \
+        "the version of the app is not correct"
+    # check if associated workloads are active
+    ns = app.targetNamespace
+    pramaters = external_id.split('&')
+    chart = pramaters[1].split("=")[1] + "-" + pramaters[2].split("=")[1]
+    workloads = p_client.list_workload(namespaceId=ns).data
+    assert len(workloads) == 1, "expected only 1 workload in the namespace"
+    for wl in workloads:
+        assert wl.state == "active"
+        assert wl.workloadLabels.chart == chart, \
+            "the chart version is wrong"
