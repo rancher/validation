@@ -5,7 +5,7 @@ node {
   def containerPrefix = "${JOB_NAME}${BUILD_NUMBER}"
 
   def rancherConfig = "rancher_env.config"
-  def imageName = "rancher-validation-tests"
+  def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
   def testsDir = "tests/v3_api/"
 
   def pre_branch = PREUPGRADE_BRANCH
@@ -265,6 +265,8 @@ node {
       if (RANCHER_DELETE_SERVER.toLowerCase() == "true" && buildFail == false) {
         sh "docker rm  ${containerPrefix}_delete"
       }
+
+      sh "docker rmi ${imageName}"
     }
   }
 }

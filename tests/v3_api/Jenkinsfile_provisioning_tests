@@ -3,7 +3,7 @@ def deleteContainer = "${JOB_NAME}${BUILD_NUMBER}_delete"
 def deletePytestOptions = "-k test_delete_rancher_server"
 def deleteResultsOut = "delete-results.xml"
 def testsDir = "tests/v3_api/"
-def imageName = "rancher-validation-tests"
+def imageName = "rancher-validation-${JOB_NAME}${env.BUILD_NUMBER}"
 def envFile = ".env"
 def RANCHER_DEPLOYED = false
 
@@ -38,7 +38,7 @@ node {
         }
 
         stage('Deploy Rancher server') {
-          sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env rancher-validation-tests /bin/bash " +
+          sh "docker run --name ${JOB_NAME}${BUILD_NUMBER} -t --env-file .env ${imageName} /bin/bash " +
              "-c \'pytest -v -s --junit-xml=setup.xml -k test_deploy_rancher_server tests/v3_api/\'"
           sh "docker cp ${JOB_NAME}${BUILD_NUMBER}:/src/rancher-validation/tests/v3_api/rancher_env.config ."
           load "rancher_env.config"
@@ -91,6 +91,7 @@ node {
       stage('Cleanup') {
         sh "docker stop ${JOB_NAME}${BUILD_NUMBER}"
         sh "docker rm -v ${JOB_NAME}${BUILD_NUMBER}"
+        sh "docker rmi ${imageName}"
       }
     }
   }
