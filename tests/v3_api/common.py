@@ -12,6 +12,7 @@ from rancher import ApiError
 from lib.aws import AmazonWebServices
 
 DEFAULT_TIMEOUT = 120
+DEFAULT_MULTI_CLUSTER_APP_TIMEOUT = 300
 
 CATTLE_TEST_URL = os.environ.get('CATTLE_TEST_URL', "http://localhost:80")
 ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', "None")
@@ -24,6 +25,7 @@ MACHINE_TIMEOUT = float(os.environ.get('RANCHER_MACHINE_TIMEOUT', "1200"))
 
 TEST_IMAGE = "sangeetha/mytestcontainer"
 CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
+CLUSTER_NAME_2 = os.environ.get("RANCHER_CLUSTER_NAME_2", "")
 RANCHER_CLEANUP_CLUSTER = \
     ast.literal_eval(os.environ.get('RANCHER_CLEANUP_CLUSTER', "True"))
 env_file = os.path.join(
@@ -1102,3 +1104,59 @@ def validate_file_content(pod, content, filename):
     cmd_get_content = "/bin/bash -c 'cat {0}' ".format(filename)
     output = kubectl_pod_exec(pod, cmd_get_content)
     assert output.strip().decode('utf-8') == content
+
+
+def wait_for_mcapp_to_active(client, multiClusterApp,
+                             timeout=DEFAULT_MULTI_CLUSTER_APP_TIMEOUT):
+    time.sleep(5)
+    mcapps = client.list_multiClusterApp(uuid=multiClusterApp.uuid,
+                                         name=multiClusterApp.name).data
+    start = time.time()
+    assert len(mcapps) == 1, "Cannot find multi cluster app"
+    mapp = mcapps[0]
+    while mapp.state != "active":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(.5)
+        multiclusterapps = client.list_multiClusterApp(
+            uuid=multiClusterApp.uuid, name=multiClusterApp.name).data
+        assert len(multiclusterapps) == 1
+        mapp = multiclusterapps[0]
+    return mapp
+
+
+def wait_for_app_to_active(client, app_id,
+                           timeout=DEFAULT_MULTI_CLUSTER_APP_TIMEOUT):
+    app_data = client.list_app(name=app_id).data
+    start = time.time()
+    assert len(app_data) == 1, "Cannot find app"
+    application = app_data[0]
+    while application.state != "active":
+        if time.time() - start > timeout:
+            raise AssertionError(
+                "Timed out waiting for state to get to active")
+        time.sleep(.5)
+        app = client.list_app(name=app_id).data
+        assert len(app) == 1
+        application = app[0]
+    return application
+
+
+def validate_response_app_endpoint(p_client, appId):
+    ingress_list = p_client.list_ingress(namespaceId=appId).data
+    assert len(ingress_list) == 1
+    ingress = ingress_list[0]
+    if hasattr(ingress, 'publicEndpoints'):
+        for public_endpoint in ingress.publicEndpoints:
+            url = \
+                public_endpoint["protocol"].lower() + "://" + \
+                public_endpoint["hostname"]
+            print(url)
+            try:
+                r = requests.head(url)
+                assert r.status_code == 200, \
+                    "Http response is not 200. Failed to launch the app"
+            except requests.ConnectionError:
+                print("failed to connect")
+                assert False, "failed to connect to the app"
