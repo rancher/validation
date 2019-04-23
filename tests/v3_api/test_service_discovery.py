@@ -4,13 +4,16 @@ import pytest
 
 from .common import *  # NOQA
 
-CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
-CLUSTER_NAME = os.environ.get("CLUSTER_NAME", "")
 RANCHER_CLEANUP_PROJECT = os.environ.get("RANCHER_CLEANUP_PROJECT", "True")
 namespace = {"p_client": None, "ns": None, "cluster": None,
              "project": None, "testclient_pods": [], "workload": None}
 DNS_RESOLUTION_DEFAULT_SECONDS = \
     os.environ.get("RANCHER_DNS_RESOLUTION_SECONDS", 30)
+SKIP_PING_CHECK_TEST = \
+    ast.literal_eval(os.environ.get('RANCHER_SKIP_PING_CHECK_TEST', "False"))
+if_skip_ping_check_test = pytest.mark.skipif(
+    SKIP_PING_CHECK_TEST,
+    reason='This test is only for testing upgrading Rancher')
 
 
 def create_and_validate_wl(name, con, scale, type, p_client=None, ns=None):
@@ -232,6 +235,7 @@ def test_dns_record_type_workload_when_workload_upgrade():
     validate_dns_record_for_workload(workload, scale, record)
 
 
+@if_skip_ping_check_test
 def test_dns_record_type_external_ip():
     ns = namespace["ns"]
     record = {"type": "dnsRecord", "ipAddresses": ["8.8.8.8"],
@@ -240,6 +244,7 @@ def test_dns_record_type_external_ip():
     create_and_validate_dns_record(record, expected)
 
 
+@if_skip_ping_check_test
 def test_dns_record_type_multiple_external_ips():
     ns = namespace["ns"]
     record = {"type": "dnsRecord", "ipAddresses": ["8.8.8.8", "8.8.4.4"],
@@ -248,6 +253,7 @@ def test_dns_record_type_multiple_external_ips():
     create_and_validate_dns_record(record, expected)
 
 
+@if_skip_ping_check_test
 def test_dns_record_type_hostname():
     ns = namespace["ns"]
     record = {"type": "dnsRecord", "hostname": "google.com",
@@ -256,6 +262,7 @@ def test_dns_record_type_hostname():
     create_and_validate_dns_record(record, expected)
 
 
+@if_skip_ping_check_test
 def test_dns_record_type_alias():
     ns = namespace["ns"]
 
