@@ -1,5 +1,5 @@
 import pytest
-from .common import *
+from .common import * # NOQA
 
 project = {}
 project_detail = {"p_client": None, "namespace": None,
