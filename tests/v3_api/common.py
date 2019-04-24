@@ -1003,9 +1003,10 @@ def validate_lb(p_client, workload):
 
 
 def validate_nodePort(p_client, workload, cluster):
-    source_port = workload.publicEndpoints[0]["port"]
+    wl = p_client.list_workload(id=workload.id).data[0]
+    source_port = wl.publicEndpoints[0]["port"]
     nodes = get_schedulable_nodes(cluster)
-    pods = p_client.list_pod(workloadId=workload.id).data
+    pods = p_client.list_pod(workloadId=wl.id).data
     target_name_list = []
     for pod in pods:
         target_name_list.append(pod.name)

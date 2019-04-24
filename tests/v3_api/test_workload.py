@@ -275,11 +275,12 @@ def test_wl_with_hostPort():
 def test_wl_with_nodePort():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
+    source_port = 30456
     port = {"containerPort": 80,
             "type": "containerPort",
             "kind": "NodePort",
             "protocol": "TCP",
-            "sourcePort": 0}
+            "sourcePort": source_port}
     con = [{"name": "test1",
             "image": TEST_IMAGE,
             "ports": [port]}]
@@ -289,6 +290,7 @@ def test_wl_with_nodePort():
                                         containers=con,
                                         namespaceId=ns.id,
                                         daemonSetConfig={})
+
     workload = wait_for_wl_to_active(p_client, workload)
     validate_nodePort(p_client, workload, namespace["cluster"])
 
@@ -334,11 +336,12 @@ def test_wl_with_clusterIp():
 def test_wl_with_lb():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
+    source_port = 9001
     port = {"containerPort": 80,
             "type": "containerPort",
             "kind": "LoadBalancer",
             "protocol": "TCP",
-            "sourcePort": 9001}
+            "sourcePort": source_port}
     con = [{"name": "test1",
             "image": TEST_IMAGE,
             "ports": [port]}]
@@ -408,11 +411,12 @@ def test_wl_with_clusterIp_scale_and_upgrade():
 def test_wl_with_nodePort_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
+    source_port = 30456
     port = {"containerPort": 80,
             "type": "containerPort",
             "kind": "NodePort",
             "protocol": "TCP",
-            "sourcePort": 0}
+            "sourcePort": source_port}
     con = [{"name": "test1",
             "image": TEST_IMAGE,
             "ports": [port]}]
@@ -500,11 +504,12 @@ def test_wl_with_hostPort_scale_and_upgrade():
 def test_wl_with_lb_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
+    source_port = 9001
     port = {"containerPort": 80,
             "type": "containerPort",
             "kind": "LoadBalancer",
             "protocol": "TCP",
-            "sourcePort": 9001}
+            "sourcePort": source_port}
     con = [{"name": "test1",
             "image": TEST_IMAGE,
             "ports": [port]}]
@@ -544,7 +549,7 @@ def test_wl_with_lb_scale_and_upgrade():
 def create_project_client(request):
     client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, "testworkload")
+    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, random_test_name("testworkload"))
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     namespace["p_client"] = p_client
     namespace["ns"] = ns
