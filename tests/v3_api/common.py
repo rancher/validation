@@ -498,13 +498,24 @@ def wait_until_lb_is_active(url, timeout=300):
     return
 
 
-def check_for_no_access(url):
+def check_for_no_access(url, verify=False):
     try:
-        requests.get(url)
+        requests.get(url, verify=verify)
         return False
     except requests.ConnectionError:
         print("Connection Error - " + url)
         return True
+
+
+def wait_until_active(rancher_url, timeout=120):
+    start = time.time()
+    while check_for_no_access(rancher_url):
+        time.sleep(.5)
+        print("No access yet")
+        if time.time() - start > timeout:
+            raise Exception('Timed out waiting for Rancher server '
+                            'to become active')
+    return
 
 
 def validate_http_response(cmd, target_name_list, client_pod=None):
@@ -807,10 +818,13 @@ def kubectl_pod_exec(pod, cmd):
     return execute_kubectl_cmd(command, json_out=False, stderr=True)
 
 
-def exec_shell_command(ip, port, cmd, password):
+def exec_shell_command(ip, port, cmd, password,user="root", sshKey=None):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(ip, username="root", password=password, port=port)
+    if sshKey:
+        ssh.connect(ip, username=user, key_filename=sshKey, port=port)
+    else:
+        ssh.connect(ip, username=user, password=password, port=port)
     stdin, stdout, stderr = ssh.exec_command(cmd)
     response = stdout.readlines()
     return response

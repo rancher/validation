@@ -16,9 +16,15 @@ def test_import_rke_cluster():
     aws_nodes = create_nodes()
     clusterfilepath = create_rke_cluster_config(aws_nodes)
 
+    is_file = os.path.isfile(clusterfilepath)
+    assert is_file
+
     # Create RKE K8s Cluster
     clustername = random_test_name("testimport")
-    execute_rke_cmd("up", clusterfilepath)
+    rkecommand = 'rke ' + "up" \
+                 + ' --config ' + clusterfilepath
+    print(rkecommand)
+    result = run_command_with_stderr(rkecommand)
 
     cluster = client.create_cluster(name=clustername)
     print(cluster)
@@ -85,16 +91,3 @@ def readDataFile(data_dir, name):
     assert is_file
     with open(fname) as f:
         return f.read()
-
-
-def execute_rke_cmd(cmd, fname, stderr=True):
-
-    command = 'rke ' + cmd \
-              + ' --config ' + fname
-    print(command)
-    if stderr:
-        result = run_command_with_stderr(command)
-    else:
-        result = run_command(command)
-    print(result)
-    return result

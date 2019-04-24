@@ -19,6 +19,10 @@ upgrade_check_stage = os.environ.get('RANCHER_UPGRADE_CHECK', "preupgrade")
 validate_ingress = \
     ast.literal_eval(os.environ.get('RANCHER_INGRESS_CHECK', "True"))
 
+sshUser = os.environ.get('RANCHER_SSH_USER', "ubuntu")
+rancherVersion = os.environ.get('RANCHER_SERVER_VERSION', "master")
+upgradeVersion = os.environ.get('RANCHER_SERVER_VERSION_UPGRADE', "master")
+upgradeImage = os.environ.get('RANCHER_UPGRADE_IMAGE', "rancher/rancher")
 value = base64.b64encode(b"valueall")
 keyvaluepair = {"testall": value.decode('utf-8')}
 
@@ -70,6 +74,9 @@ if_pre_upgrade = pytest.mark.skipif(
 if_validate_ingress = pytest.mark.skipif(
     validate_ingress is False,
     reason='This test is not executed')
+if_upgrade_rancher = pytest.mark.skipif(
+    upgrade_check_stage != "upgrade_rancher",
+    reason='This test is only for testing upgrading Rancher')
 
 
 @if_post_upgrade
@@ -169,6 +176,17 @@ def test_create_and_validate_ingress_xip_io_daemon():
 @pytest.mark.run(order=5)
 def test_create_and_validate_ingress_xip_io_wl():
     create_and_validate_ingress_xip_io_wl()
+
+
+# the flag if_upgarde_rancher is false all the time
+# because we do not have this option for the variable RANCHER_UPGRADE_CHECK
+# instead, we will have a new pipeline that calls this function directly
+@if_upgrade_rancher
+def test_rancher_upgrade():
+    upgrade_rancher_server(CATTLE_TEST_URL)
+    client = get_admin_client()
+    version = client.list_setting(name="server-version").data[0].value
+    assert version == upgradeVersion
 
 
 def create_and_validate_wl():
@@ -522,3 +540,33 @@ def validate_worklaods_with_secret(workload_name1, workload_name2):
     validate_workload_with_secret(
         p_client, wk2, "deployment", ns.name, keyvaluepair,
         workloadwithsecretasenvvar=True)
+
+
+def upgrade_rancher_server(serverIp,
+                           sshKeyPath=".ssh/jenkins-rke-validation.pem",
+                           containerName="rancher-server"):
+    if serverIp.startswith('https://'):
+        serverIp = serverIp[8:]
+
+    stopCommand = "docker stop " + containerName
+    print(exec_shell_command(serverIp, 22, stopCommand, "",
+                             sshUser, sshKeyPath))
+
+    createVolumeCommand = "docker create --volumes-from " + containerName + \
+                          " --name rancher-data rancher/rancher:" + \
+                          rancherVersion
+
+    print(exec_shell_command(serverIp, 22, createVolumeCommand, "",
+                             sshUser, sshKeyPath))
+
+    removeCommand = "docker rm " + containerName
+    print(exec_shell_command(serverIp, 22, removeCommand, "",
+                             sshUser, sshKeyPath))
+
+    runCommand = "docker run -d --volumes-from rancher-data " \
+                 "--restart=unless-stopped " \
+                 "-p 80:80 -p 443:443 " + upgradeImage + ":" + upgradeVersion
+    print(exec_shell_command(serverIp, 22, runCommand, "",
+                             sshUser, sshKeyPath))
+
+    wait_until_active(CATTLE_TEST_URL)
