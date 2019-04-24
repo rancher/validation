@@ -709,7 +709,11 @@ def node_template_az():
             "10251/tcp",
             "10252/tcp",
             "80/tcp",
-            "443/tcp"
+            "443/tcp",
+            "9999/tcp",
+            "8888/tcp",
+            "30456/tcp",
+            "9001/tcp"
         ],
         "privateIpAddress": "",
         "resourceGroup": "docker-machine",
