@@ -1,0 +1,5 @@
+FROM mcr.microsoft.com/windows/servercore/iis:windowsservercore-ltsc2019
+RUN powershell -NoProfile -Command Remove-Item -Recurse C:\inetpub\wwwroot\*
+ADD test.bat c:\\test.bat
+WORKDIR /inetpub/wwwroot
+ENTRYPOINT [ "C:\\test.bat", "&&", "C:\\ServiceMonitor.exe", "w3svc" ]
