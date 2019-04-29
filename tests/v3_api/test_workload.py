@@ -384,7 +384,7 @@ def test_wl_with_clusterIp_scale_and_upgrade():
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)
 
     # scale up
-    p_client.update(workload, scale=3, caontainers=con)
+    p_client.update(workload, scale=3, containers=con)
     workload = wait_for_wl_to_active(p_client, workload)
     wait_for_pods_in_workload(p_client, workload, 3)
     validate_clusterIp(p_client, workload, cluster_ip, test_pods)

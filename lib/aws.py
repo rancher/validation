@@ -25,20 +25,18 @@ AWS_INSTANCE_TYPE = os.environ.get("AWS_INSTANCE_TYPE", 't2.medium')
 AWS_IAM_PROFILE = os.environ.get("AWS_IAM_PROFILE", "")
 
 PRIVATE_IMAGES = {
-    "ubuntu-16.04-docker-1.12.6": {
-        'image': 'ami-997347fc', 'ssh_user': 'ubuntu'},
-    "ubuntu-16.04-docker-1.13.1": {
-        'image': 'ami-9b84b1fe', 'ssh_user': 'ubuntu'},
-    "ubuntu-16.04-docker-17.03": {
-        'image': 'ami-3181b454', 'ssh_user': 'ubuntu'},
-    "ubuntu-16.04-docker-17.12": {
-        'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
-    "ubuntu-16.04-docker-latest": {
-        'image': 'ami-bc87b2d9', 'ssh_user': 'ubuntu'},
-    "ubuntu-16.04-docker-18.06": {
-        'image': 'ami-03c17ef3311dfb21e', 'ssh_user': 'ubuntu'},
-    "rhel-7.4-docker-native": {
-        'image': 'ami-1f6c477a', 'ssh_user': 'ec2-user'}}
+    "rancheros-v1.5.1-docker-native": {
+        'image': 'ami-00769ca587d8e100c', 'ssh_user': 'rancher'},
+    "rhel-7.6-docker-native-113": {
+        'image': 'ami-04b9aacf7e1512c0b', 'ssh_user': 'ec2-user'},
+    "suse-sles12-sp2-docker-18061ce": {
+        'image': 'ami-0cc154aeb82bd8fa0', 'ssh_user': 'ec2-user'},
+    "ubuntu-16.04-docker-18.09": {
+        'image': 'ami-07e968eb9151b2599', 'ssh_user': 'ubuntu'},
+    "ubuntu-18.04-docker-18.09": {
+        'image': 'ami-02dcbc347c866fb5d', 'ssh_user': 'ubuntu'},
+    "rhel-7.6-docker-18.09": {
+        'image': 'ami-094574ffb6efb3a9b', 'ssh_user': 'ec2-user'}}
 
 PUBLIC_AMI = {
     'us-east-2': {

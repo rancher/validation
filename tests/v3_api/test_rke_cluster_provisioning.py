@@ -4,6 +4,7 @@ import pytest
 from .common import *  # NOQA
 
 K8S_VERSION = os.environ.get('RANCHER_K8S_VERSION', "")
+K8S_VERSION_UPGRADE = os.environ.get('RANCHER_K8S_VERSION_UPGRADE', "")
 DO_ACCESSKEY = os.environ.get('DO_ACCESSKEY', "None")
 AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
@@ -18,11 +19,8 @@ AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
 AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
 AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID")
 worker_count = int(os.environ.get('RANCHER_STRESS_TEST_WORKER_COUNT', 1))
+HOST_NAME = os.environ.get('RANCHER_HOST_NAME', "testcustom")
 
-if CLUSTER_NAME == "": 
-    RANCHER_CLUSTER_NAME_CREATE = random_name()
-else:
-    RANCHER_CLUSTER_NAME_CREATE = CLUSTER_NAME
 
 engine_install_url = "https://releases.rancher.com/install-docker/18.09.sh"
 rke_config = {
@@ -149,11 +147,11 @@ def test_rke_ec2_host_4(node_template_ec2):
 def test_rke_custom_host_1():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            1, random_test_name("testcustom"))
+            1, random_test_name(HOST_NAME))
     node_roles = ["worker", "controlplane", "etcd"]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -169,12 +167,12 @@ def test_rke_custom_host_1():
 def test_rke_custom_host_2():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            5, random_test_name("testcustom"))
+            5, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -192,14 +190,14 @@ def test_rke_custom_host_2():
 def test_rke_custom_host_3():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            8, random_test_name("testcustom"))
+            8, random_test_name(HOST_NAME))
     node_roles = [
         ["controlplane"], ["controlplane"],
         ["etcd"], ["etcd"], ["etcd"],
         ["worker"], ["worker"], ["worker"]
     ]
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -217,7 +215,7 @@ def test_rke_custom_host_3():
 def test_rke_custom_host_4():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            8, random_test_name("testcustom"))
+            8, random_test_name(HOST_NAME))
     node_roles = [
         {"roles": ["controlplane"],
          "nodes":[aws_nodes[0], aws_nodes[1]]},
@@ -227,7 +225,7 @@ def test_rke_custom_host_4():
          "nodes": [aws_nodes[5], aws_nodes[6], aws_nodes[7]]}
     ]
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -256,7 +254,7 @@ def test_rke_custom_host_stress():
     for int in range(0, worker_count):
         node_roles.append(worker_role)
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -275,12 +273,12 @@ def test_rke_custom_host_stress():
 def test_rke_custom_host_etcd_plane_changes():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            7, random_test_name("testcustom"))
+            7, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -321,12 +319,12 @@ def test_rke_custom_host_etcd_plane_changes():
 def test_rke_custom_host_etcd_plane_changes_1():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            7, random_test_name("testcustom"))
+            7, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -361,13 +359,13 @@ def test_rke_custom_host_control_plane_changes():
     aws_nodes = \
         aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            6, random_test_name("testcustom"))
+            6, random_test_name(HOST_NAME))
 
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"], ["worker"], ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -401,12 +399,12 @@ def test_rke_custom_host_control_plane_changes():
 def test_rke_custom_host_worker_plane_changes():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            4, random_test_name("testcustom"))
+            4, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -439,12 +437,12 @@ def test_rke_custom_host_worker_plane_changes():
 def test_rke_custom_control_node_power_down():
     aws_nodes = \
         AmazonWebServices().create_multiple_nodes(
-            5, random_test_name("testcustom"))
+            5, random_test_name(HOST_NAME))
     node_roles = [["controlplane"], ["etcd"],
                   ["worker"]]
 
     client = get_admin_client()
-    cluster = client.create_cluster(name=RANCHER_CLUSTER_NAME_CREATE,
+    cluster = client.create_cluster(name=evaluate_clustername(),
                                     driver="rancherKubernetesEngine",
                                     rancherKubernetesEngineConfig=rke_config)
     assert cluster.state == "active"
@@ -492,23 +490,23 @@ def test_rke_custom_control_node_power_down():
 @if_test_edit_cluster
 def test_edit_cluster_k8s_version():
     client = get_admin_client()
-    clusters = client.list_cluster(name=RANCHER_CLUSTER_NAME_CREATE).data
+    clusters = client.list_cluster(name=evaluate_clustername()).data
     assert len(clusters) == 1
     cluster = clusters[0]
     rke_config = cluster.rancherKubernetesEngineConfig
     rke_updated_config = rke_config.copy()
-    rke_updated_config["kubernetesVersion"] = K8S_VERSION
+    rke_updated_config["kubernetesVersion"] = K8S_VERSION_UPGRADE
     cluster = client.update(cluster,
                             name=cluster.name,
                             rancherKubernetesEngineConfig=rke_updated_config)
     cluster = validate_cluster(client, cluster, intermediate_state="updating",
-                               k8s_version=K8S_VERSION)
+                               k8s_version=K8S_VERSION_UPGRADE)
 
 
 def test_delete_cluster():
     client = get_admin_client()
     if len(CLUSTER_NAME) > 0:
-        clusters = client.list_cluster(name=RANCHER_CLUSTER_NAME_CREATE).data
+        clusters = client.list_cluster(name=evaluate_clustername()).data
     else:
         clusters = client.list_cluster().data
     for cluster in clusters:
@@ -635,7 +633,7 @@ def validate_rke_dm_host_4(node_template,
 def create_and_vaildate_cluster(client, nodes,
                                 rancherKubernetesEngineConfig=rke_config):
     cluster = client.create_cluster(
-        name=RANCHER_CLUSTER_NAME_CREATE,
+        name=evaluate_clustername(),
         rancherKubernetesEngineConfig=rancherKubernetesEngineConfig)
     node_pools = []
     for node in nodes:
@@ -758,6 +756,14 @@ def node_template_ec2():
     )
     node_template = client.wait_success(node_template)
     return node_template
+
+
+def evaluate_clustername():
+    if CLUSTER_NAME == "":
+        cluster_name = random_name()
+    else:
+        cluster_name = CLUSTER_NAME
+    return cluster_name
 
 
 @pytest.fixture(scope='session')
