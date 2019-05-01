@@ -411,7 +411,7 @@ def test_wl_with_clusterIp_scale_and_upgrade():
 def test_wl_with_nodePort_scale_and_upgrade():
     p_client = namespace["p_client"]
     ns = namespace["ns"]
-    source_port = 30456
+    source_port = 30457
     port = {"containerPort": 80,
             "type": "containerPort",
             "kind": "NodePort",
@@ -549,7 +549,8 @@ def test_wl_with_lb_scale_and_upgrade():
 def create_project_client(request):
     client, cluster = get_admin_client_and_cluster()
     create_kubeconfig(cluster)
-    p, ns = create_project_and_ns(ADMIN_TOKEN, cluster, random_test_name("testworkload"))
+    p, ns = create_project_and_ns(
+        ADMIN_TOKEN, cluster, random_test_name("testworkload"))
     p_client = get_project_client_for_token(p, ADMIN_TOKEN)
     namespace["p_client"] = p_client
     namespace["ns"] = ns

@@ -69,9 +69,11 @@ app_ns = create_prefix + "-app-ns"
 app_create_name = create_prefix + "-app"
 app_validate_name = validate_prefix + "-app"
 # the pre_upgrade_externalId is for launching an app
-pre_upgrade_externalId = "catalog://?catalog=library&template=mysql&version=0.3.7"
+pre_upgrade_externalId = \
+    "catalog://?catalog=library&template=mysql&version=0.3.7"
 # the post_upgrade_externalId is for upgrading the existing app
-post_upgrade_externalId = "catalog://?catalog=library&template=mysql&version=0.3.8"
+post_upgrade_externalId = \
+    "catalog://?catalog=library&template=mysql&version=0.3.8"
 
 if_post_upgrade = pytest.mark.skipif(
     upgrade_check_stage != "postupgrade",
