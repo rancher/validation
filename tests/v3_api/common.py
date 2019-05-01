@@ -15,15 +15,14 @@ DEFAULT_TIMEOUT = 120
 DEFAULT_MULTI_CLUSTER_APP_TIMEOUT = 300
 
 CATTLE_TEST_URL = os.environ.get('CATTLE_TEST_URL', "http://localhost:80")
-ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', "None")
-
 CATTLE_API_URL = CATTLE_TEST_URL + "/v3"
 
+ADMIN_TOKEN = os.environ.get('ADMIN_TOKEN', "None")
 kube_fname = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "k8s_kube_config")
 MACHINE_TIMEOUT = float(os.environ.get('RANCHER_MACHINE_TIMEOUT', "1200"))
 
-TEST_IMAGE = "sangeetha/mytestcontainer"
+TEST_IMAGE = os.environ.get('RANCHER_TEST_IMAGE', "sangeetha/mytestcontainer")
 CLUSTER_NAME = os.environ.get("RANCHER_CLUSTER_NAME", "")
 CLUSTER_NAME_2 = os.environ.get("RANCHER_CLUSTER_NAME_2", "")
 RANCHER_CLEANUP_CLUSTER = \
@@ -525,18 +524,20 @@ def check_for_no_access(url, verify=False):
         return True
 
 
-def wait_until_active(rancher_url, timeout=120):
+def wait_until_active(url, timeout=120):
     start = time.time()
-    while check_for_no_access(rancher_url):
+    while check_for_no_access(url):
         time.sleep(.5)
         print("No access yet")
         if time.time() - start > timeout:
-            raise Exception('Timed out waiting for Rancher server '
+            raise Exception('Timed out waiting for url '
                             'to become active')
     return
 
 
 def validate_http_response(cmd, target_name_list, client_pod=None):
+    if client_pod is None and cmd.startswith("http://"):
+        wait_until_active(cmd, 60)
     target_hit_list = target_name_list[:]
     count = 5 * len(target_name_list)
     for i in range(1, count):
@@ -989,10 +990,11 @@ def validate_hostPort(p_client, workload, source_port, cluster):
             if pod.nodeId == node.id:
                 target_name_list.append(pod.name)
                 break
-        host_ip = node.externalIpAddress
-        curl_cmd = " http://" + host_ip + ":" + \
-                   str(source_port) + "/name.html"
-        validate_http_response(curl_cmd, target_name_list)
+        if len(target_name_list) > 0:
+            host_ip = node.externalIpAddress
+            curl_cmd = " http://" + host_ip + ":" + \
+                       str(source_port) + "/name.html"
+            validate_http_response(curl_cmd, target_name_list)
 
 
 def validate_lb(p_client, workload):
@@ -1003,7 +1005,8 @@ def validate_lb(p_client, workload):
 
 
 def validate_nodePort(p_client, workload, cluster):
-    wl = p_client.list_workload(id=workload.id).data[0]
+    get_endpoint_url_for_workload(p_client, workload, 60)
+    wl = p_client.list_workload(uuid=workload.uuid).data[0]
     source_port = wl.publicEndpoints[0]["port"]
     nodes = get_schedulable_nodes(cluster)
     pods = p_client.list_pod(workloadId=wl.id).data
