@@ -17,3 +17,4 @@ python-digitalocean==1.13.2
 PyYAML==3.13
 requests==2.19.1
 websocket-client==0.53.0
+asyncio==3.4.3
