@@ -21,8 +21,11 @@ validate_ingress = \
 
 sshUser = os.environ.get('RANCHER_SSH_USER', "ubuntu")
 rancherVersion = os.environ.get('RANCHER_SERVER_VERSION', "master")
+rancherImage = os.environ.get('RANCHER_SERVER_IMAGE', "rancher/rancher")
 upgradeVersion = os.environ.get('RANCHER_SERVER_VERSION_UPGRADE', "master")
-upgradeImage = os.environ.get('RANCHER_UPGRADE_IMAGE', "rancher/rancher")
+upgradeImage = os.environ.get('RANCHER_SERVER_IMAGE_UPGRADE',
+                              "rancher/rancher")
+upgradeEnv = os.environ.get('RANCHER_SERVER_ENV_UPGRADE', "")
 
 value = base64.b64encode(b"valueall")
 keyvaluepair = {"testall": value.decode('utf-8')}
@@ -582,9 +585,8 @@ def upgrade_rancher_server(serverIp,
           sshUser, sshKeyPath))
 
     createVolumeCommand = "docker create --volumes-from " + containerName + \
-                          " --name rancher-data rancher/rancher:" + \
+                          " --name rancher-data " + rancherImage + ":" + \
                           rancherVersion
-
     print(exec_shell_command(serverIp, 22, createVolumeCommand, "",
           sshUser, sshKeyPath))
 
@@ -594,7 +596,11 @@ def upgrade_rancher_server(serverIp,
 
     runCommand = "docker run -d --volumes-from rancher-data " \
                  "--restart=unless-stopped " \
-                 "-p 80:80 -p 443:443 " + upgradeImage + ":" + upgradeVersion
+                 "-p 80:80 -p 443:443 "
+    if len(upgradeEnv) > 0:
+        runCommand += " -e " + upgradeEnv + " "
+    runCommand += upgradeImage + ":" + upgradeVersion
+
     print(exec_shell_command(serverIp, 22, runCommand, "",
           sshUser, sshKeyPath))
 

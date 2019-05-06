@@ -4,7 +4,9 @@ import ast
 AGENT_REG_CMD = os.environ.get('RANCHER_AGENT_REG_CMD', "")
 HOST_COUNT = int(os.environ.get('RANCHER_HOST_COUNT', 1))
 HOST_NAME = os.environ.get('RANCHER_HOST_NAME', "testsa")
-RANCHER_SERVER_VERSION = os.environ.get('RANCHER_SERVER_VERSION', "master")
+RANCHER_VERSION = os.environ.get('RANCHER_SERVER_VERSION', "master")
+RANCHER_IMAGE = os.environ.get('RANCHER_SERVER_IMAGE', "rancher/rancher")
+RANCHER_ENV = os.environ.get('RANCHER_SERVER_ENV', "")
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', "None")
 rke_config = {"authentication": {"type": "authnConfig", "strategy": "x509"},
               "ignoreDockerVersion": False,
@@ -33,11 +35,13 @@ def test_delete_keypair():
 
 
 def test_deploy_rancher_server():
+    assert ADMIN_PASSWORD != "None", "Need to set admin passsword"
     RANCHER_SERVER_CMD = \
         'docker run -d --name="rancher-server" ' \
-        '--restart=unless-stopped -p 80:80 -p 443:443  ' \
-        'rancher/rancher'
-    RANCHER_SERVER_CMD += ":" + RANCHER_SERVER_VERSION
+        '--restart=unless-stopped -p 80:80 -p 443:443  '
+    if len(RANCHER_ENV) > 0:
+        RANCHER_SERVER_CMD += " -e " + RANCHER_ENV + " "
+    RANCHER_SERVER_CMD += RANCHER_IMAGE + ":" + RANCHER_VERSION
     aws_nodes = AmazonWebServices().create_multiple_nodes(
         1, random_test_name("testsa"+HOST_NAME))
     aws_nodes[0].execute_command(RANCHER_SERVER_CMD)
@@ -65,7 +69,7 @@ def test_deploy_rancher_server():
             name=random_name(),
             driver="rancherKubernetesEngine",
             rancherKubernetesEngineConfig=rke_config)
-        assert cluster.state == "active"
+        assert cluster.state == "provisioning"
         i = 0
         for aws_node in aws_nodes:
             docker_run_cmd = \
