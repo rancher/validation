@@ -818,7 +818,7 @@ def kubectl_pod_exec(pod, cmd):
     return execute_kubectl_cmd(command, json_out=False, stderr=True)
 
 
-def exec_shell_command(ip, port, cmd, password,user="root", sshKey=None):
+def exec_shell_command(ip, port, cmd, password, user="root", sshKey=None):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     if sshKey:
