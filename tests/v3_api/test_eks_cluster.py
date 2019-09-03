@@ -31,7 +31,7 @@ def get_eks_config():
     amazonConfig = {
         "accessKey": EKS_ACCESS_KEY,
         "secretKey": EKS_SECRET_KEY,
-        "instanceType": "m4.large",
+        "instanceType": "m5.large",
         "maximumNodes": 3,
         "minimumNodes": 1,
         "region": EKS_REGION,
