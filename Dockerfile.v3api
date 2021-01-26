@@ -15,4 +15,4 @@ RUN wget https://storage.googleapis.com/kubernetes-release/release/$KUBECTL_VERS
     mv rke_linux-amd64 /bin/rke && \
     chmod +x /bin/rke && \
     cd $WORKSPACE && \
-    pip install -r requirements_v3api.txt
+    pip install --no-cache-dir -r requirements_v3api.txt
