@@ -7,7 +7,7 @@ Jinja2==2.10
 kubernetes==7.0.0
 netaddr==0.7.19
 paramiko==2.4.2
-PyJWT==1.6.4
+PyJWT==2.4.0
 pytest-repeat==0.7.0
 pytest-xdist==1.23.0
 pytest==3.8.1
